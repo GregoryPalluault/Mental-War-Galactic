@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Anneau arrière -->
+  <ellipse cx="32" cy="32" rx="28" ry="10" fill="none" stroke="#a78bfa" stroke-width="4" opacity="0.6"/>
+  <!-- Planète -->
+  <defs>
+    <radialGradient id="planetGrad" cx="38%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="50%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </radialGradient>
+    <radialGradient id="ringGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </radialGradient>
+    <clipPath id="topClip">
+      <rect x="0" y="0" width="64" height="32"/>
+    </clipPath>
+  </defs>
+  <!-- Planète -->
+  <circle cx="32" cy="32" r="18" fill="url(#planetGrad)"/>
+  <!-- Bandes atmosphériques -->
+  <ellipse cx="32" cy="28" rx="17" ry="4" fill="none" stroke="#6366f1" stroke-width="1.5" opacity="0.4"/>
+  <ellipse cx="32" cy="35" rx="17" ry="3" fill="none" stroke="#818cf8" stroke-width="1" opacity="0.3"/>
+  <!-- Anneau avant (coupé derrière la planète) -->
+  <ellipse cx="32" cy="32" rx="28" ry="10" fill="none" stroke="#c4b5fd" stroke-width="4" opacity="0.85" clip-path="url(#topClip)"/>
+</svg>
