@@ -50,6 +50,7 @@
   .solo-back { background: none; border: none; color: var(--dim); font-size: 11px; letter-spacing: 2px; cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; width: 100%; text-align: center; padding: 6px; }
   .solo-back:hover { color: var(--text); }
   .level-card-chapter { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; text-transform: uppercase; }
+  #solo-diff-section.diff-section { margin-top: 0; margin-bottom: 24px; }
 
   /* ===== HISTOIRE / BRIEFING SOLO ===== */
   .story-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 48px 56px; width: 600px; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
@@ -259,6 +260,7 @@
   <div class="solo-box fade-in">
     <div class="solo-title">MODE SOLO</div>
     <div class="solo-sub">Choisis ta mission</div>
+    <div class="diff-section" id="solo-diff-section"></div>
     <div class="level-cards" id="solo-level-cards"></div>
     <button class="solo-back" onclick="showHomeScreen()">← Retour</button>
   </div>
@@ -566,6 +568,10 @@ let soloFinished = false;
 const SOLO_WAVE_SIZE = 3; // nombre de vaisseaux envoyés par attaque en mode solo
 let soloFleetReserve = 0; // vaisseaux gagnés au quiz, en attente d'être envoyés par paquets
 
+// ===== DIFFICULTÉ SOLO (localStorage) =====
+const SOLO_DIFF_KEY = 'mentalwar_solo_difficulty';
+let soloDifficulty = parseInt(localStorage.getItem(SOLO_DIFF_KEY)) || 1;
+
 // ===== PROGRESSION SOLO (localStorage) =====
 const SOLO_SAVE_KEY = 'mentalwar_solo_progress';
 function getSoloProgress() {
@@ -629,7 +635,29 @@ window.showHomeScreen = function() {
 window.showSoloScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
   document.getElementById('solo-select-screen').classList.remove('hidden');
+  renderSoloDifficultySelector();
   renderSoloLevelCards();
+};
+
+// ===== SÉLECTION DIFFICULTÉ SOLO =====
+function renderSoloDifficultySelector() {
+  const section = document.getElementById('solo-diff-section');
+  if (!section) return;
+  section.innerHTML = `
+    <div class="diff-section-label">Niveau de difficulté des questions</div>
+    <div class="diff-row">
+      ${[1,2,3].map(i => `
+        <button class="diff-btn${soloDifficulty===i?' active':''}" onclick="setSoloDifficulty(${i})">
+          <div class="diff-btn-num">${i}</div>
+          <div>${DIFF_NAMES[i]}</div>
+        </button>`).join('')}
+    </div>
+    <div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px;min-height:16px">${DIFF_DESCS[soloDifficulty]}</div>`;
+}
+window.setSoloDifficulty = function(n) {
+  soloDifficulty = n;
+  localStorage.setItem(SOLO_DIFF_KEY, n);
+  renderSoloDifficultySelector();
 };
 window.showMultiScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
@@ -1299,7 +1327,7 @@ window.ingSelectLevel = function(level) {
 // ===== QUIZ =====
 function startQuiz() {
   if (isSolo && soloFinished) return; // niveau terminé, ne pas relancer
-  questions = generateQuestions(myLevel, isSolo ? 1 : gameDifficulty);
+  questions = generateQuestions(myLevel, isSolo ? soloDifficulty : gameDifficulty);
   currentQ = 0; answers = []; earnedShips = 0;
   attackStep = 0; fromPlanet = null; toPlanet = null;
   document.getElementById('attack-panel').classList.add('hidden');
