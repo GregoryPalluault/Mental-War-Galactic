@@ -61,7 +61,7 @@
   .story-chapter { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 5px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 6px; text-align: center; text-transform: uppercase; }
   .story-title { font-family: 'Orbitron', monospace; font-size: 22px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-bottom: 16px; text-align: center; }
   .story-body { display: flex; gap: 28px; align-items: flex-start; margin-bottom: 20px; }
-  .story-img { width: 240px; max-height: 60vh; flex-shrink: 0; border-radius: 4px; border: 1px solid rgba(255,215,0,0.25); box-shadow: 0 0 30px rgba(255,215,0,0.12); object-fit: cover; }
+  .story-img { width: auto; height: 40vh; max-width: 260px; flex-shrink: 0; border-radius: 4px; border: 1px solid rgba(255,215,0,0.25); box-shadow: 0 0 30px rgba(255,215,0,0.12); object-fit: cover; }
   .story-text { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 0; }
   .story-text p { margin-bottom: 12px; }
   .story-text p:last-child { margin-bottom: 0; }
@@ -171,10 +171,10 @@
 
   /* ===== SOLO WINNER ===== */
   #solo-winner-screen { flex-direction: column; background: rgba(0,0,0,0.88); z-index: 300; }
-  .solo-winner-box { text-align: center; padding: 40px 56px; max-width: 92vw; max-height: 88vh; overflow-y: auto; }
-  .solo-winner-label { font-size: 10px; letter-spacing: 4px; color: var(--dim); margin-bottom: 8px; }
-  .solo-winner-title { font-family: 'Orbitron', monospace; font-size: 40px; font-weight: 900; letter-spacing: 4px; color: var(--gold); text-shadow: 0 0 40px rgba(255,215,0,0.5); margin-bottom: 6px; }
-  .solo-winner-lvl { font-size: 14px; color: var(--dim); letter-spacing: 3px; margin-bottom: 20px; }
+  .solo-winner-box { text-align: center; padding: 28px 56px; max-width: 92vw; max-height: 88vh; overflow-y: auto; }
+  .solo-winner-label { font-size: 10px; letter-spacing: 4px; color: var(--dim); margin-bottom: 6px; }
+  .solo-winner-title { font-family: 'Orbitron', monospace; font-size: 32px; font-weight: 900; letter-spacing: 4px; color: var(--gold); text-shadow: 0 0 40px rgba(255,215,0,0.5); margin-bottom: 4px; }
+  .solo-winner-lvl { font-size: 14px; color: var(--dim); letter-spacing: 3px; margin-bottom: 14px; }
   .solo-winner-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
   .solo-winner-btn { padding: 14px 32px; border: none; border-radius: 2px; font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
   .swb-next { background: linear-gradient(135deg, var(--gold), #cc8800); color: #000; box-shadow: 0 0 20px rgba(255,215,0,0.3); }
@@ -1495,15 +1495,36 @@ function generateQuestions(shipLevel, difficulty = 1) {
     return { question, answer, choices: [answer, ...wrongs].sort(() => Math.random() - 0.5) };
   }
 
+  // Pour l'addition/soustraction : évite les distracteurs "consécutifs" (answer±1, ±2...)
+  // qui se distinguent uniquement par le chiffre des unités, sans recalculer les dizaines.
+  function addSubWrongs(answer, count) {
+    const s = new Set();
+    const deltas = [10, -10, 20, -20, 9, -9, 11, -11];
+    for (const d of deltas) {
+      if (s.size >= count) break;
+      const v = answer + d;
+      if (v > 0 && v !== answer) s.add(v);
+    }
+    for (let d = 1; s.size < count; d++) {
+      const v = answer + d;
+      if (v > 0 && v !== answer) s.add(v);
+    }
+    return [...s].sort(() => Math.random() - 0.5).slice(0, count);
+  }
+  function mkAddSubQ(question, answer) {
+    const wrongs = addSubWrongs(answer, 3);
+    return { question, answer, choices: [answer, ...wrongs].sort(() => Math.random() - 0.5) };
+  }
+
   // Générateurs atomiques
   function addQ(aMin, aMax, bMin, bMax) {
     const a = ri(aMin, aMax), b = ri(bMin, bMax);
-    return mkQ(`${a} + ${b}`, a + b);
+    return mkAddSubQ(`${a} + ${b}`, a + b);
   }
   function subQ(aMin, aMax, bMin, bMax) {
     const b = ri(bMin, bMax);
     const a = ri(Math.max(aMin, b + 1), aMax);
-    return mkQ(`${a} − ${b}`, a - b);
+    return mkAddSubQ(`${a} − ${b}`, a - b);
   }
   function multQ(table) {
     const b = ri(2, 10);
@@ -1920,6 +1941,7 @@ function animateProjectile(from, to, color, ships) {
   path.setAttribute('d',`M${from.x},${from.y} Q${cx},${cy} ${to.x},${to.y}`); path.setAttribute('fill','none'); path.setAttribute('stroke',color); path.setAttribute('stroke-width','1'); path.setAttribute('stroke-dasharray','4 6'); path.setAttribute('opacity','0.25');
   layer.appendChild(path);
   const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  const shipG = document.createElementNS('http://www.w3.org/2000/svg','g');
   const trailCount=5, trails=[];
   for (let i=0;i<trailCount;i++) { const tr=document.createElementNS('http://www.w3.org/2000/svg','circle'); tr.setAttribute('r',String(5-i*0.7)); tr.setAttribute('fill',color); tr.setAttribute('opacity','0'); tr.setAttribute('pointer-events','none'); layer.appendChild(tr); trails.push({el:tr,delay:(i+1)*0.04}); }
   const glow=document.createElementNS('http://www.w3.org/2000/svg','circle'); glow.setAttribute('r','14'); glow.setAttribute('fill',color); glow.setAttribute('opacity','0.15');
@@ -1928,13 +1950,15 @@ function animateProjectile(from, to, color, ships) {
   const lvl=ships<=10?1:ships<=30?2:3;
   dot.setAttribute('href',SHIP_IMAGES[lvl]); dot.setAttribute('width',shipSize); dot.setAttribute('height',shipSize); dot.setAttribute('x',-shipSize/2); dot.setAttribute('y',-shipSize/2); dot.setAttribute('opacity','1');
   const lbl=document.createElementNS('http://www.w3.org/2000/svg','text'); lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('dy','-14'); lbl.setAttribute('font-family','Orbitron,monospace'); lbl.setAttribute('font-size','12'); lbl.setAttribute('font-weight','700'); lbl.setAttribute('fill',color); lbl.setAttribute('pointer-events','none'); lbl.textContent=ships;
-  g.appendChild(glow); g.appendChild(dot); g.appendChild(lbl); layer.appendChild(g);
+  shipG.appendChild(dot);
+  g.appendChild(glow); g.appendChild(shipG); g.appendChild(lbl); layer.appendChild(g);
   const start=performance.now();
   function getBezierPos(t) { return { x:(1-t)*(1-t)*from.x+2*(1-t)*t*cx+t*t*to.x, y:(1-t)*(1-t)*from.y+2*(1-t)*t*cy+t*t*to.y }; }
   function getBezierTangent(t) { const dx2=2*(1-t)*(cx-from.x)+2*t*(to.x-cx), dy2=2*(1-t)*(cy-from.y)+2*t*(to.y-cy); return Math.atan2(dy2,dx2)*180/Math.PI; }
   function animate(now) {
     const t=Math.min((now-start)/ANIM_DURATION,1), pos=getBezierPos(t), angle=getBezierTangent(t)+180;
-    g.setAttribute('transform',`translate(${pos.x},${pos.y}) rotate(${angle})`);
+    g.setAttribute('transform',`translate(${pos.x},${pos.y})`);
+    shipG.setAttribute('transform',`rotate(${angle})`);
     trails.forEach((tr,i) => { const tTrail=Math.max(0,t-tr.delay),tp2=getBezierPos(tTrail); tr.el.setAttribute('cx',tp2.x); tr.el.setAttribute('cy',tp2.y); tr.el.setAttribute('opacity',String(t>0.02?(0.5-i*0.08)*(1-t):0)); });
     if(t<1) { requestAnimationFrame(animate); }
     else { try{layer.removeChild(g);layer.removeChild(path);trails.forEach(tr=>layer.removeChild(tr.el));}catch(e){} impactEffect(to,color,ships); }
