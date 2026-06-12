@@ -338,6 +338,7 @@
       </defs>
       <g id="planets-layer"></g>
       <g id="projectiles-layer"></g>
+      <g id="orbit-layer"></g>
     </svg>
   </div>
   <div id="right-panel">
@@ -852,6 +853,7 @@ function checkSoloResult() {
 }
 
 function showSoloVictory() {
+  stopOrbitFleet();
   document.getElementById('solo-winner-screen').classList.remove('hidden');
   document.getElementById('solo-winner-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
   document.getElementById('solo-winner-story').innerHTML = SOLO_LEVELS[soloLevelNum-1].storyOutro || '';
@@ -866,6 +868,7 @@ function showSoloVictory() {
 }
 
 function showSoloDefeat() {
+  stopOrbitFleet();
   document.getElementById('solo-defeat-screen').classList.remove('hidden');
   document.getElementById('solo-defeat-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
 }
@@ -895,8 +898,9 @@ function cleanupSolo() {
   soloBotIntervals = [];
   soloMapState = {};
   gameState = null;
-  earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
+  earnedShips = 0; soloFleetReserve = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
   myLevel = 1; myTotalShips = 0;
+  stopOrbitFleet();
   document.getElementById('planets-layer').innerHTML = '';
   document.getElementById('projectiles-layer').innerHTML = '';
   document.getElementById('attack-panel').classList.add('hidden');
@@ -1498,11 +1502,53 @@ function showAttackPanel() {
     soloFleetReserve = earnedShips;
     earnedShips = 0;
     attackStep = 2; fromPlanet = 'planet_player'; toPlanet = null;
+    startOrbitFleet();
   } else {
     attackStep = 1; fromPlanet = null; toPlanet = null;
     document.getElementById('ap-ships').textContent = earnedShips;
   }
   updateAttackUI();
+}
+
+// ===== FLOTTE EN ORBITE (SOLO) =====
+let soloOrbitRAF = null;
+function startOrbitFleet() {
+  stopOrbitFleet();
+  function loop(t) {
+    renderOrbitFleet(t);
+    soloOrbitRAF = requestAnimationFrame(loop);
+  }
+  soloOrbitRAF = requestAnimationFrame(loop);
+}
+function stopOrbitFleet() {
+  if (soloOrbitRAF) cancelAnimationFrame(soloOrbitRAF);
+  soloOrbitRAF = null;
+  const layer = document.getElementById('orbit-layer');
+  if (layer) layer.innerHTML = '';
+}
+function renderOrbitFleet(t) {
+  const layer = document.getElementById('orbit-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  if (!isSolo || soloFleetReserve <= 0) return;
+  const p = gameState?.['planet_player'];
+  if (!p) return;
+  const count = Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE);
+  const radius = p.r + 26;
+  const baseAngle = (t || 0) * 0.0006;
+  const size = 18;
+  for (let i = 0; i < count; i++) {
+    const angle = baseAngle + (i / count) * Math.PI * 2;
+    const x = p.x + Math.cos(angle) * radius;
+    const y = p.y + Math.sin(angle) * radius;
+    const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    img.setAttribute('href', SHIP_IMAGES[1]);
+    img.setAttribute('width', size); img.setAttribute('height', size);
+    img.setAttribute('x', x - size/2); img.setAttribute('y', y - size/2);
+    img.setAttribute('transform', `rotate(${angle*180/Math.PI + 90} ${x} ${y})`);
+    img.setAttribute('pointer-events', 'none');
+    layer.appendChild(img);
+  }
 }
 
 function updateAttackUI() {
@@ -1562,6 +1608,7 @@ function fireWaveAttack(targetId) {
 
   if (soloFleetReserve <= 0) {
     attackStep = 0; fromPlanet = null; toPlanet = null;
+    stopOrbitFleet();
     document.getElementById('attack-panel').classList.add('hidden');
     const panel = document.getElementById('question-panel');
     panel.style.display = 'flex';
@@ -1623,6 +1670,7 @@ async function cleanOldProjectiles() {
 window.cancelAttackSelection = function() { attackStep=1; fromPlanet=null; document.getElementById('selection-ring')?.remove(); updateAttackUI(); };
 window.skipAttack = function() {
   earnedShips=0; soloFleetReserve=0; attackStep=0; fromPlanet=null; toPlanet=null;
+  stopOrbitFleet();
   document.getElementById('selection-ring')?.remove();
   document.getElementById('attack-panel').classList.add('hidden');
   showLevelSelector();
