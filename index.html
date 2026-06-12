@@ -150,6 +150,9 @@
   .ap-step-waiting { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); color: var(--dim); }
   .ap-cancel { margin-top: auto; background: none; border: none; color: var(--dim); font-size: 11px; cursor: pointer; letter-spacing: 2px; text-decoration: underline; padding: 8px; }
   .ap-cancel:hover { color: var(--text); }
+  .ap-wave-info { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .ap-wave-icon { width: 32px; height: 22px; object-fit: contain; }
+  .ap-wave-mult { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 900; color: var(--gold); }
 
   /* ===== WINNER ===== */
   #winner-screen { flex-direction: column; background: rgba(0,0,0,0.85); z-index: 300; }
@@ -341,7 +344,7 @@
     <div id="question-panel"></div>
     <div id="attack-panel" class="hidden">
       <div class="ap-ships-big" id="ap-ships">0</div>
-      <div class="ap-ships-label">VAISSEAUX DISPONIBLES</div>
+      <div class="ap-ships-label" id="ap-ships-label">VAISSEAUX DISPONIBLES</div>
       <div id="ap-step1" class="ap-step ap-step-active">① Clique sur une de tes planètes (départ)</div>
       <div id="ap-step2" class="ap-step ap-step-waiting">② Clique sur la planète cible</div>
       <button class="ap-cancel" id="ap-cancel-btn" onclick="cancelAttackSelection()" style="display:none">✕ Annuler la sélection</button>
@@ -560,6 +563,8 @@ let soloLevelNum = 1;
 let soloBotIntervals = [];
 let soloMapState = {};   // carte locale (pas Firebase)
 let soloFinished = false;
+const SOLO_WAVE_SIZE = 3; // nombre de vaisseaux envoyés par attaque en mode solo
+let soloFleetReserve = 0; // vaisseaux gagnés au quiz, en attente d'être envoyés par paquets
 
 // ===== PROGRESSION SOLO (localStorage) =====
 const SOLO_SAVE_KEY = 'mentalwar_solo_progress';
@@ -1488,14 +1493,30 @@ function answerQuestion(chosen, correct) {
 function showAttackPanel() {
   document.getElementById('question-panel').style.display = 'none';
   document.getElementById('attack-panel').classList.remove('hidden');
-  attackStep = 1; fromPlanet = null; toPlanet = null;
-  document.getElementById('ap-ships').textContent = earnedShips;
+  if (isSolo) {
+    // En solo, les vaisseaux gagnés partent en orbite et sont envoyés par paquets
+    soloFleetReserve = earnedShips;
+    earnedShips = 0;
+    attackStep = 2; fromPlanet = 'planet_player'; toPlanet = null;
+  } else {
+    attackStep = 1; fromPlanet = null; toPlanet = null;
+    document.getElementById('ap-ships').textContent = earnedShips;
+  }
   updateAttackUI();
 }
 
 function updateAttackUI() {
   const s1 = document.getElementById('ap-step1'), s2 = document.getElementById('ap-step2'), cb = document.getElementById('ap-cancel-btn');
+  if (isSolo) {
+    document.getElementById('ap-ships').textContent = soloFleetReserve;
+    document.getElementById('ap-ships-label').textContent = 'VAISSEAUX EN ORBITE';
+    s1.className = 'ap-step ap-step-done';
+    s1.innerHTML = `<div class="ap-wave-info"><img class="ap-wave-icon" src="${SHIP_IMAGES[1]}" alt=""><span class="ap-wave-mult">× ${SOLO_WAVE_SIZE}</span> par attaque</div>`;
+    s2.className = 'ap-step ap-step-active'; s2.textContent = '🎯 Clique sur une planète pour envoyer un paquet'; cb.style.display = 'none';
+    return;
+  }
   if (attackStep === 1) {
+    document.getElementById('ap-ships-label').textContent = 'VAISSEAUX DISPONIBLES';
     s1.className = 'ap-step ap-step-active'; s1.textContent = '① Clique sur une de tes planètes (départ)';
     s2.className = 'ap-step ap-step-waiting'; s2.textContent = '② Clique sur la planète cible'; cb.style.display = 'none';
   } else {
@@ -1506,15 +1527,52 @@ function updateAttackUI() {
 
 // ===== CLIC PLANÈTE =====
 function onPlanetClick(planetId) {
+  if (isSolo) {
+    if (attackStep !== 2 || soloFleetReserve <= 0) return;
+    if (!gameState?.[planetId]) return;
+    if (planetId === 'planet_player') { showToast('Choisis une planète à attaquer !'); return; }
+    fireWaveAttack(planetId);
+    return;
+  }
   if (attackStep === 0 || earnedShips === 0) return;
   const planet = gameState?.[planetId]; if (!planet) return;
   if (attackStep === 1) {
     if (planet.team !== 't1' && planet.team !== myTeam) { showToast('Choisis une de tes planètes comme départ !'); return; }
-    if (isSolo && planet.team !== 't1') { showToast('Choisis une de tes planètes comme départ !'); return; }
     fromPlanet = planetId; attackStep = 2; highlightPlanet(fromPlanet); updateAttackUI();
   } else if (attackStep === 2) {
     if (planetId === fromPlanet) { showToast('Choisis une planète différente !'); return; }
     toPlanet = planetId; fireAttack();
+  }
+}
+
+// ===== ENVOI D'UN PAQUET DE VAISSEAUX (SOLO) =====
+function fireWaveAttack(targetId) {
+  const fp = gameState?.['planet_player'], tp = gameState?.[targetId];
+  if (!fp || !tp) return;
+  const wave = Math.min(SOLO_WAVE_SIZE, soloFleetReserve);
+  soloFleetReserve -= wave;
+
+  animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, '#00e5ff', wave);
+  setTimeout(() => {
+    if (soloFinished) return;
+    soloApplyAttack(targetId, 't1', wave);
+    myTotalShips += wave;
+    document.getElementById('banner-my-ships').textContent = myTotalShips;
+  }, ANIM_DURATION);
+
+  if (soloFleetReserve <= 0) {
+    attackStep = 0; fromPlanet = null; toPlanet = null;
+    document.getElementById('attack-panel').classList.add('hidden');
+    const panel = document.getElementById('question-panel');
+    panel.style.display = 'flex';
+    panel.scrollTop = 0;
+    panel.innerHTML = `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px">
+      <div style="font-size:36px">🚀</div>
+      <div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:2px;color:var(--dim)">VAISSEAUX EN ROUTE…</div>
+    </div>`;
+    setTimeout(() => { if (!soloFinished) showLevelSelector(); }, ANIM_DURATION);
+  } else {
+    updateAttackUI();
   }
 }
 
@@ -1534,51 +1592,24 @@ async function fireAttack() {
   const ships = earnedShips;
   const impactTarget = toPlanet;
 
-  if (isSolo) {
-    // Animation locale
-    animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, '#00e5ff', ships);
-    earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
-    document.getElementById('ap-ships').textContent = 0;
-    document.getElementById('selection-ring')?.remove();
-    attackPending = false;
-    // Pendant l'animation : afficher message d'attente
-    document.getElementById('attack-panel').classList.add('hidden');
-    const panel = document.getElementById('question-panel');
-    panel.style.display = 'flex';
-    panel.scrollTop = 0;
-    panel.innerHTML = `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px">
-      <div style="font-size:36px">🚀</div>
-      <div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:2px;color:var(--dim)">VAISSEAUX EN ROUTE…</div>
-    </div>`;
-    // Après l'impact : appliquer et relancer seulement si pas encore terminé
-    setTimeout(() => {
-      soloApplyAttack(impactTarget, 't1', ships);
-      myTotalShips += ships;
-      document.getElementById('banner-my-ships').textContent = myTotalShips;
-      // showSoloVictory ou showSoloDefeat seront appelés par checkSoloResult si besoin
-      // Sinon on relance le sélecteur
-      if (!soloFinished) showLevelSelector();
-    }, ANIM_DURATION);
-  } else {
-    // Multi : Firebase
-    const projRef = push(gameRef('projectiles'));
-    await set(projRef, { fx: fp.x, fy: fp.y, tx: tp.x, ty: tp.y, team: myTeam, ships, ts: Date.now(), seen: { [myId]: true } });
-    animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, TEAM_COLORS[myTeam], ships);
-    earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
-    document.getElementById('ap-ships').textContent = 0;
-    document.getElementById('selection-ring')?.remove();
-    attackPending = false;
-    document.getElementById('attack-panel').classList.add('hidden');
-    document.getElementById('question-panel').style.display = 'flex';
-    showLevelSelector();
-    setTimeout(async () => {
-      await applyAttack(impactTarget, myTeam, ships);
-      myTotalShips += ships;
-      await update(gameRef(`players/${myId}`), { totalShips: myTotalShips });
-      document.getElementById('banner-my-ships').textContent = myTotalShips;
-      cleanOldProjectiles();
-    }, ANIM_DURATION);
-  }
+  // Multi : Firebase
+  const projRef = push(gameRef('projectiles'));
+  await set(projRef, { fx: fp.x, fy: fp.y, tx: tp.x, ty: tp.y, team: myTeam, ships, ts: Date.now(), seen: { [myId]: true } });
+  animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, TEAM_COLORS[myTeam], ships);
+  earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
+  document.getElementById('ap-ships').textContent = 0;
+  document.getElementById('selection-ring')?.remove();
+  attackPending = false;
+  document.getElementById('attack-panel').classList.add('hidden');
+  document.getElementById('question-panel').style.display = 'flex';
+  showLevelSelector();
+  setTimeout(async () => {
+    await applyAttack(impactTarget, myTeam, ships);
+    myTotalShips += ships;
+    await update(gameRef(`players/${myId}`), { totalShips: myTotalShips });
+    document.getElementById('banner-my-ships').textContent = myTotalShips;
+    cleanOldProjectiles();
+  }, ANIM_DURATION);
 }
 
 async function cleanOldProjectiles() {
@@ -1591,7 +1622,7 @@ async function cleanOldProjectiles() {
 
 window.cancelAttackSelection = function() { attackStep=1; fromPlanet=null; document.getElementById('selection-ring')?.remove(); updateAttackUI(); };
 window.skipAttack = function() {
-  earnedShips=0; attackStep=0; fromPlanet=null; toPlanet=null;
+  earnedShips=0; soloFleetReserve=0; attackStep=0; fromPlanet=null; toPlanet=null;
   document.getElementById('selection-ring')?.remove();
   document.getElementById('attack-panel').classList.add('hidden');
   showLevelSelector();
