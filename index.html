@@ -35,10 +35,6 @@
   .solo-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 40px 48px; width: 560px; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
   .solo-title { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 5px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 4px; text-align: center; }
   .solo-sub { font-size: 10px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; margin-bottom: 32px; text-align: center; }
-  .solo-pseudo-row { display: flex; gap: 10px; margin-bottom: 24px; }
-  .solo-pseudo-input { flex: 1; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.2); border-radius: 2px; color: var(--text); font-family: 'Exo 2', sans-serif; font-size: 15px; padding: 12px 16px; outline: none; }
-  .solo-pseudo-input:focus { border-color: var(--gold); }
-  .solo-pseudo-input::placeholder { color: var(--dim); }
   .level-cards { display: flex; flex-direction: column; gap: 10px; }
   .level-card { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 4px; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.02); position: relative; }
   .level-card:hover:not(.locked) { transform: translateX(4px); background: rgba(255,255,255,0.05); }
@@ -261,9 +257,6 @@
   <div class="solo-box fade-in">
     <div class="solo-title">MODE SOLO</div>
     <div class="solo-sub">Choisis ta mission</div>
-    <div class="solo-pseudo-row">
-      <input class="solo-pseudo-input" id="solo-pseudo-input" type="text" placeholder="Ton pseudo de commandant" maxlength="16">
-    </div>
     <div class="level-cards" id="solo-level-cards"></div>
     <button class="solo-back" onclick="showHomeScreen()">← Retour</button>
   </div>
@@ -632,9 +625,6 @@ window.showSoloScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
   document.getElementById('solo-select-screen').classList.remove('hidden');
   renderSoloLevelCards();
-  // Pré-remplir pseudo depuis multi si dispo
-  const multiPseudo = document.getElementById('pseudo-input').value;
-  if (multiPseudo) document.getElementById('solo-pseudo-input').value = multiPseudo;
 };
 window.showMultiScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
@@ -665,8 +655,6 @@ function renderSoloLevelCards() {
 
 // ===== BRIEFING D'HISTOIRE SOLO =====
 function startSoloLevelFlow(num) {
-  const pseudo = document.getElementById('solo-pseudo-input').value.trim();
-  if (!pseudo) { showToast('Entre un pseudo !'); return; }
   showSoloStory(num);
 }
 
@@ -690,9 +678,7 @@ function showSoloStory(num) {
 
 // ===== DÉMARRAGE NIVEAU SOLO =====
 function startSoloLevel(num) {
-  const pseudo = document.getElementById('solo-pseudo-input').value.trim();
-  if (!pseudo) { showToast('Entre un pseudo !'); return; }
-  myPseudo = pseudo;
+  myPseudo = 'Commandant';
   myTeam = 't1';
   myLevel = 1;
   isSolo = true;
