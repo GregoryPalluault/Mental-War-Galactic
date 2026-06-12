@@ -853,7 +853,7 @@ function checkSoloResult() {
 }
 
 function showSoloVictory() {
-  stopOrbitFleet();
+  clearOrbitFleet();
   document.getElementById('solo-winner-screen').classList.remove('hidden');
   document.getElementById('solo-winner-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
   document.getElementById('solo-winner-story').innerHTML = SOLO_LEVELS[soloLevelNum-1].storyOutro || '';
@@ -868,7 +868,7 @@ function showSoloVictory() {
 }
 
 function showSoloDefeat() {
-  stopOrbitFleet();
+  clearOrbitFleet();
   document.getElementById('solo-defeat-screen').classList.remove('hidden');
   document.getElementById('solo-defeat-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
 }
@@ -900,7 +900,7 @@ function cleanupSolo() {
   gameState = null;
   earnedShips = 0; soloFleetReserve = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
   myLevel = 1; myTotalShips = 0;
-  stopOrbitFleet();
+  clearOrbitFleet();
   document.getElementById('planets-layer').innerHTML = '';
   document.getElementById('projectiles-layer').innerHTML = '';
   document.getElementById('attack-panel').classList.add('hidden');
@@ -1502,7 +1502,8 @@ function showAttackPanel() {
     soloFleetReserve = earnedShips;
     earnedShips = 0;
     attackStep = 2; fromPlanet = 'planet_player'; toPlanet = null;
-    startOrbitFleet();
+    highlightPlanet('planet_player');
+    renderOrbitFleet();
   } else {
     attackStep = 1; fromPlanet = null; toPlanet = null;
     document.getElementById('ap-ships').textContent = earnedShips;
@@ -1511,41 +1512,34 @@ function showAttackPanel() {
 }
 
 // ===== FLOTTE EN ORBITE (SOLO) =====
-let soloOrbitRAF = null;
-function startOrbitFleet() {
-  stopOrbitFleet();
-  function loop(t) {
-    renderOrbitFleet(t);
-    soloOrbitRAF = requestAnimationFrame(loop);
-  }
-  soloOrbitRAF = requestAnimationFrame(loop);
+const MAX_ORBIT_SHIPS = 8;
+// Position (et orientation, pointe vers l'extérieur) d'un emplacement fixe sur l'orbite
+function orbitSlotPos(p, i) {
+  const radius = p.r + 26;
+  const angle = (i / MAX_ORBIT_SHIPS) * Math.PI * 2 - Math.PI / 2;
+  return { x: p.x + Math.cos(angle) * radius, y: p.y + Math.sin(angle) * radius, angle };
 }
-function stopOrbitFleet() {
-  if (soloOrbitRAF) cancelAnimationFrame(soloOrbitRAF);
-  soloOrbitRAF = null;
+function clearOrbitFleet() {
   const layer = document.getElementById('orbit-layer');
   if (layer) layer.innerHTML = '';
 }
-function renderOrbitFleet(t) {
+function renderOrbitFleet() {
   const layer = document.getElementById('orbit-layer');
   if (!layer) return;
   layer.innerHTML = '';
   if (!isSolo || soloFleetReserve <= 0) return;
   const p = gameState?.['planet_player'];
   if (!p) return;
-  const count = Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE);
-  const radius = p.r + 26;
-  const baseAngle = (t || 0) * 0.0006;
+  const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
   const size = 18;
   for (let i = 0; i < count; i++) {
-    const angle = baseAngle + (i / count) * Math.PI * 2;
-    const x = p.x + Math.cos(angle) * radius;
-    const y = p.y + Math.sin(angle) * radius;
+    const { x, y, angle } = orbitSlotPos(p, i);
     const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
     img.setAttribute('href', SHIP_IMAGES[1]);
     img.setAttribute('width', size); img.setAttribute('height', size);
     img.setAttribute('x', x - size/2); img.setAttribute('y', y - size/2);
-    img.setAttribute('transform', `rotate(${angle*180/Math.PI + 90} ${x} ${y})`);
+    // La pointe du vaisseau est tournée vers l'extérieur de l'orbite
+    img.setAttribute('transform', `rotate(${angle*180/Math.PI - 180} ${x} ${y})`);
     img.setAttribute('pointer-events', 'none');
     layer.appendChild(img);
   }
@@ -1593,12 +1587,16 @@ function onPlanetClick(planetId) {
 
 // ===== ENVOI D'UN PAQUET DE VAISSEAUX (SOLO) =====
 function fireWaveAttack(targetId) {
-  const fp = gameState?.['planet_player'], tp = gameState?.[targetId];
-  if (!fp || !tp) return;
+  const p = gameState?.['planet_player'], tp = gameState?.[targetId];
+  if (!p || !tp) return;
   const wave = Math.min(SOLO_WAVE_SIZE, soloFleetReserve);
+  // Le vaisseau quitte sa position actuelle sur l'orbite, en une seule trajectoire vers la cible
+  const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
+  const launch = orbitSlotPos(p, count - 1);
   soloFleetReserve -= wave;
+  renderOrbitFleet();
 
-  animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, '#00e5ff', wave);
+  animateProjectile({ x: launch.x, y: launch.y }, { x: tp.x, y: tp.y }, '#00e5ff', wave);
   setTimeout(() => {
     if (soloFinished) return;
     soloApplyAttack(targetId, 't1', wave);
@@ -1608,7 +1606,8 @@ function fireWaveAttack(targetId) {
 
   if (soloFleetReserve <= 0) {
     attackStep = 0; fromPlanet = null; toPlanet = null;
-    stopOrbitFleet();
+    clearOrbitFleet();
+    document.getElementById('selection-ring')?.remove();
     document.getElementById('attack-panel').classList.add('hidden');
     const panel = document.getElementById('question-panel');
     panel.style.display = 'flex';
@@ -1670,7 +1669,7 @@ async function cleanOldProjectiles() {
 window.cancelAttackSelection = function() { attackStep=1; fromPlanet=null; document.getElementById('selection-ring')?.remove(); updateAttackUI(); };
 window.skipAttack = function() {
   earnedShips=0; soloFleetReserve=0; attackStep=0; fromPlanet=null; toPlanet=null;
-  stopOrbitFleet();
+  clearOrbitFleet();
   document.getElementById('selection-ring')?.remove();
   document.getElementById('attack-panel').classList.add('hidden');
   showLevelSelector();
