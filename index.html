@@ -1531,16 +1531,16 @@ function generateQuestions(shipLevel, difficulty = 1) {
 
   } else { // difficulty === 3
     if (shipLevel === 1) {
-      // Éclaireur N3 : 3 add(100-500+10-99) · 3 sub(200-500−10-99) · 4 mult ×6-9
-      for (let i = 0; i < 3; i++) gen.push(() => addQ(100, 500, 10, 99));
-      for (let i = 0; i < 3; i++) gen.push(() => subQ(200, 500, 10, 99));
-      shu([6, 7, 8, 9]).forEach(t => gen.push(() => multQ(t)));
+      // Éclaireur N3 : 3 add(10-20+1-10) · 2 sub(10-20−1-9) · 5 mult ×5-9
+      for (let i = 0; i < 3; i++) gen.push(() => addQ(10, 20, 1, 10));
+      for (let i = 0; i < 2; i++) gen.push(() => subQ(10, 20, 1, 9));
+      shu([5, 6, 7, 8, 9]).forEach(t => gen.push(() => multQ(t)));
     } else if (shipLevel === 2) {
-      // Croiseur N3 : 2 add(100-500+100-500) · 2 sub(200-999−100-499) · 3 mult ×7-9 · 3 div ×4-7
-      for (let i = 0; i < 2; i++) gen.push(() => addQ(100, 500, 100, 500));
-      for (let i = 0; i < 2; i++) gen.push(() => subQ(200, 999, 100, 499));
+      // Croiseur N3 : 2 add(10-20+30-50) · 2 sub(50-100−10-20) · 3 mult ×7-9 · 3 div ×6-9
+      for (let i = 0; i < 2; i++) gen.push(() => addQ(10, 20, 30, 50));
+      for (let i = 0; i < 2; i++) gen.push(() => subQ(50, 100, 10, 20));
       shu([7, 8, 9]).forEach(t => gen.push(() => multQ(t)));
-      shu([4, 5, 6, 7]).slice(0, 3).forEach(t => gen.push(() => divQ(t)));
+      shu([6, 7, 8, 9]).slice(0, 3).forEach(t => gen.push(() => divQ(t)));
     } else {
       // Amiral N3 : 2 ×0,5 · 2 ×3/4 · 3 pourcentages(10/20/25/50%) · 3 div ×7-9
       for (let i = 0; i < 2; i++) gen.push(() => {
