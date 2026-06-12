@@ -57,19 +57,19 @@
   .slot-delete-btn:hover { background: rgba(255,68,68,0.25); }
 
   /* ===== HISTOIRE / BRIEFING SOLO ===== */
-  .story-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 48px 56px; width: 900px; max-width: 92vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
-  .story-chapter { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 5px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 8px; text-align: center; text-transform: uppercase; }
-  .story-title { font-family: 'Orbitron', monospace; font-size: 22px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-bottom: 24px; text-align: center; }
-  .story-body { display: flex; gap: 32px; align-items: flex-start; margin-bottom: 28px; }
-  .story-img { width: 320px; flex-shrink: 0; border-radius: 4px; border: 1px solid rgba(255,215,0,0.25); box-shadow: 0 0 30px rgba(255,215,0,0.12); object-fit: cover; }
-  .story-text { font-size: 15px; line-height: 1.9; color: var(--text); margin-bottom: 0; }
+  .story-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 32px 48px; width: 880px; max-width: 92vw; max-height: 88vh; overflow-y: auto; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
+  .story-chapter { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 5px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 6px; text-align: center; text-transform: uppercase; }
+  .story-title { font-family: 'Orbitron', monospace; font-size: 22px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-bottom: 16px; text-align: center; }
+  .story-body { display: flex; gap: 28px; align-items: flex-start; margin-bottom: 20px; }
+  .story-img { width: 240px; max-height: 60vh; flex-shrink: 0; border-radius: 4px; border: 1px solid rgba(255,215,0,0.25); box-shadow: 0 0 30px rgba(255,215,0,0.12); object-fit: cover; }
+  .story-text { font-size: 14px; line-height: 1.7; color: var(--text); margin-bottom: 0; }
   .story-text p { margin-bottom: 12px; }
   .story-text p:last-child { margin-bottom: 0; }
   .story-text .story-char { color: var(--gold); font-weight: 700; }
   .story-btn { width: 100%; padding: 16px; border: none; border-radius: 2px; font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 3px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; background: linear-gradient(135deg, var(--gold), #cc8800); color: #000; box-shadow: 0 0 30px rgba(255,215,0,0.3); }
   .story-btn:hover { box-shadow: 0 0 50px rgba(255,215,0,0.5); transform: translateY(-1px); }
-  .solo-winner-body { display: flex; gap: 32px; align-items: flex-start; text-align: left; max-width: 860px; margin: 0 auto 28px; }
-  .solo-winner-story { font-size: 14px; line-height: 1.8; color: var(--text); opacity: 0.85; }
+  .solo-winner-body { display: flex; gap: 28px; align-items: flex-start; text-align: left; max-width: 800px; margin: 0 auto 20px; }
+  .solo-winner-story { font-size: 13px; line-height: 1.6; color: var(--text); opacity: 0.85; }
 
   /* ===== LOBBY MULTI ===== */
   .lobby-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(0,200,255,0.2); border-radius: 4px; padding: 48px 56px; width: 480px; box-shadow: 0 0 60px rgba(0,200,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05); text-align: center; }
@@ -171,10 +171,10 @@
 
   /* ===== SOLO WINNER ===== */
   #solo-winner-screen { flex-direction: column; background: rgba(0,0,0,0.88); z-index: 300; }
-  .solo-winner-box { text-align: center; padding: 56px 64px; max-width: 92vw; max-height: 90vh; overflow-y: auto; }
-  .solo-winner-label { font-size: 10px; letter-spacing: 4px; color: var(--dim); margin-bottom: 12px; }
-  .solo-winner-title { font-family: 'Orbitron', monospace; font-size: 48px; font-weight: 900; letter-spacing: 4px; color: var(--gold); text-shadow: 0 0 40px rgba(255,215,0,0.5); margin-bottom: 8px; }
-  .solo-winner-lvl { font-size: 14px; color: var(--dim); letter-spacing: 3px; margin-bottom: 32px; }
+  .solo-winner-box { text-align: center; padding: 40px 56px; max-width: 92vw; max-height: 88vh; overflow-y: auto; }
+  .solo-winner-label { font-size: 10px; letter-spacing: 4px; color: var(--dim); margin-bottom: 8px; }
+  .solo-winner-title { font-family: 'Orbitron', monospace; font-size: 40px; font-weight: 900; letter-spacing: 4px; color: var(--gold); text-shadow: 0 0 40px rgba(255,215,0,0.5); margin-bottom: 6px; }
+  .solo-winner-lvl { font-size: 14px; color: var(--dim); letter-spacing: 3px; margin-bottom: 20px; }
   .solo-winner-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
   .solo-winner-btn { padding: 14px 32px; border: none; border-radius: 2px; font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
   .swb-next { background: linear-gradient(135deg, var(--gold), #cc8800); color: #000; box-shadow: 0 0 20px rgba(255,215,0,0.3); }
