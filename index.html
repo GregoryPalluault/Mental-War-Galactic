@@ -429,6 +429,7 @@
 </div>
 
 <div id="toast" class="hidden"></div>
+<audio id="chapter-music" loop></audio>
 
 <!-- ===== RÉSULTATS MULTI ===== -->
 <div id="results-screen" class="screen hidden">
@@ -797,6 +798,29 @@ function renderSoloLevelCards() {
 }
 
 // ===== BRIEFING D'HISTOIRE SOLO =====
+// ===== MUSIQUE D'AMBIANCE PAR CHAPITRE =====
+const CHAPTER_MUSIC = {
+  1: 'music/ch1_theme.mp3',
+};
+
+function playChapterMusic(num) {
+  const audio = document.getElementById('chapter-music');
+  const src = CHAPTER_MUSIC[num];
+  if (!src) { stopChapterMusic(); return; }
+  if (!audio.src.endsWith(src)) {
+    audio.src = src;
+  }
+  audio.volume = 0.4;
+  audio.play().catch(() => {});
+}
+
+function stopChapterMusic() {
+  const audio = document.getElementById('chapter-music');
+  audio.pause();
+  audio.currentTime = 0;
+  audio.removeAttribute('src');
+}
+
 function startSoloLevelFlow(num) {
   showSoloStory(num);
 }
@@ -814,6 +838,7 @@ function showSoloStory(num) {
   document.getElementById('story-img').src = `story-images/ch${num}_intro.png`;
   document.getElementById('story-text').innerHTML = lvl.storyIntro;
   document.getElementById('solo-story-screen').classList.remove('hidden');
+  playChapterMusic(num);
   document.getElementById('story-start-btn').onclick = () => {
     document.getElementById('solo-story-screen').classList.add('hidden');
     startSoloLevel(num);
@@ -1027,6 +1052,7 @@ window.soloBackToMenu = function() {
   document.getElementById('solo-defeat-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.add('hidden');
   document.getElementById('solo-objective').classList.add('hidden');
+  stopChapterMusic();
   cleanupSolo();
   isSolo = false;
   document.getElementById('home-screen').classList.remove('hidden');
