@@ -183,7 +183,6 @@
   #toast.hidden { opacity: 0; }
   @keyframes selectPulse { 0% { stroke-width: 3; opacity: 0.9; } 50% { stroke-width: 6; opacity: 0.5; } 100% { stroke-width: 3; opacity: 0.9; } }
   .planet-selected-ring { animation: selectPulse 1s infinite; }
-  @keyframes rotatePlanetRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   #game-screen { position: static; display: none; }
   #game-screen:not(.hidden) { display: block; }
 
@@ -1182,9 +1181,9 @@ function renderMap(planets) {
     const shine = mkCircle(p.x-p.r*0.25, p.y-p.r*0.25, p.r*0.28, 'rgba(255,255,255,0.18)', 'none', '0', '1'); g.appendChild(shine);
     if (p.isHome) {
       const ring1 = mkCircle(p.x, p.y, p.r+16, 'none', color, '1.2', '0.4');
-      ring1.setAttribute('stroke-dasharray', '6 5'); ring1.style.transformOrigin = `${p.x}px ${p.y}px`; ring1.style.animation = `rotatePlanetRing 8s linear infinite`; g.appendChild(ring1);
+      ring1.setAttribute('stroke-dasharray', '6 5'); g.appendChild(ring1);
       const ring2 = mkCircle(p.x, p.y, p.r+22, 'none', color, '0.6', '0.2');
-      ring2.setAttribute('stroke-dasharray', '2 10'); ring2.style.transformOrigin = `${p.x}px ${p.y}px`; ring2.style.animation = `rotatePlanetRing 14s linear infinite reverse`; g.appendChild(ring2);
+      ring2.setAttribute('stroke-dasharray', '2 10'); g.appendChild(ring2);
     }
     const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     txt.setAttribute('x', p.x); txt.setAttribute('y', p.y+5); txt.setAttribute('text-anchor', 'middle');
@@ -1503,7 +1502,7 @@ function showAttackPanel() {
     earnedShips = 0;
     attackStep = 2; fromPlanet = 'planet_player'; toPlanet = null;
     highlightPlanet('planet_player');
-    renderOrbitFleet();
+    startOrbitFleet();
   } else {
     attackStep = 1; fromPlanet = null; toPlanet = null;
     document.getElementById('ap-ships').textContent = earnedShips;
@@ -1513,17 +1512,25 @@ function showAttackPanel() {
 
 // ===== FLOTTE EN ORBITE (SOLO) =====
 const MAX_ORBIT_SHIPS = 8;
-// Position (et orientation, pointe vers l'extérieur) d'un emplacement fixe sur l'orbite
-function orbitSlotPos(p, i) {
-  const radius = p.r + 26;
-  const angle = (i / MAX_ORBIT_SHIPS) * Math.PI * 2 - Math.PI / 2;
-  return { x: p.x + Math.cos(angle) * radius, y: p.y + Math.sin(angle) * radius, angle };
+const ORBIT_RADIUS_OFFSET = 26;
+const ORBIT_PERIOD = 12000; // durée d'une révolution complète (ms)
+let soloOrbitRAF = null;
+let soloOrbitElapsed = 0;
+// Angle d'un vaisseau n°i sur l'orbite à l'instant t (ms écoulées)
+function orbitAngle(i, t) {
+  const base = (i / MAX_ORBIT_SHIPS) * Math.PI * 2 - Math.PI / 2;
+  return base + (t / ORBIT_PERIOD) * Math.PI * 2;
+}
+function orbitPos(p, angle) {
+  const radius = p.r + ORBIT_RADIUS_OFFSET;
+  return { x: p.x + Math.cos(angle) * radius, y: p.y + Math.sin(angle) * radius };
 }
 function clearOrbitFleet() {
+  if (soloOrbitRAF) { cancelAnimationFrame(soloOrbitRAF); soloOrbitRAF = null; }
   const layer = document.getElementById('orbit-layer');
   if (layer) layer.innerHTML = '';
 }
-function renderOrbitFleet() {
+function renderOrbitFleet(t) {
   const layer = document.getElementById('orbit-layer');
   if (!layer) return;
   layer.innerHTML = '';
@@ -1533,16 +1540,27 @@ function renderOrbitFleet() {
   const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
   const size = 18;
   for (let i = 0; i < count; i++) {
-    const { x, y, angle } = orbitSlotPos(p, i);
+    const angle = orbitAngle(i, t);
+    const { x, y } = orbitPos(p, angle);
     const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
     img.setAttribute('href', SHIP_IMAGES[1]);
     img.setAttribute('width', size); img.setAttribute('height', size);
     img.setAttribute('x', x - size/2); img.setAttribute('y', y - size/2);
-    // La pointe du vaisseau est tournée vers l'extérieur de l'orbite
-    img.setAttribute('transform', `rotate(${angle*180/Math.PI - 180} ${x} ${y})`);
+    // La pointe du vaisseau suit la tangente de la trajectoire (sens de déplacement)
+    img.setAttribute('transform', `rotate(${angle*180/Math.PI + 270} ${x} ${y})`);
     img.setAttribute('pointer-events', 'none');
     layer.appendChild(img);
   }
+}
+function startOrbitFleet() {
+  clearOrbitFleet();
+  const start = performance.now();
+  const step = (now) => {
+    soloOrbitElapsed = now - start;
+    renderOrbitFleet(soloOrbitElapsed);
+    soloOrbitRAF = requestAnimationFrame(step);
+  };
+  soloOrbitRAF = requestAnimationFrame(step);
 }
 
 function updateAttackUI() {
@@ -1592,9 +1610,9 @@ function fireWaveAttack(targetId) {
   const wave = Math.min(SOLO_WAVE_SIZE, soloFleetReserve);
   // Le vaisseau quitte sa position actuelle sur l'orbite, en une seule trajectoire vers la cible
   const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
-  const launch = orbitSlotPos(p, count - 1);
+  const launch = orbitPos(p, orbitAngle(count - 1, soloOrbitElapsed));
   soloFleetReserve -= wave;
-  renderOrbitFleet();
+  renderOrbitFleet(soloOrbitElapsed);
 
   animateProjectile({ x: launch.x, y: launch.y }, { x: tp.x, y: tp.y }, '#00e5ff', wave);
   setTimeout(() => {
