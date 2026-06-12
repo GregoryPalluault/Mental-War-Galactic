@@ -51,6 +51,9 @@
   .solo-back:hover { color: var(--text); }
   .level-card-chapter { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; text-transform: uppercase; }
   #solo-diff-section.diff-section { margin-top: 0; margin-bottom: 24px; }
+  #solo-slot-diff-info.diff-readonly { margin-bottom: 24px; }
+  .slot-delete-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 2px; color: var(--team2); font-size: 12px; padding: 4px 7px; cursor: pointer; line-height: 1; transition: all 0.2s; }
+  .slot-delete-btn:hover { background: rgba(255,68,68,0.25); }
 
   /* ===== HISTOIRE / BRIEFING SOLO ===== */
   .story-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 48px 56px; width: 600px; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
@@ -255,14 +258,24 @@
   </div>
 </div>
 
+<!-- ===== SLOTS DE SAUVEGARDE SOLO ===== -->
+<div id="solo-slots-screen" class="screen hidden">
+  <div class="solo-box fade-in">
+    <div class="solo-title">MODE SOLO</div>
+    <div class="solo-sub">Choisis ta sauvegarde</div>
+    <div class="level-cards" id="solo-slot-cards"></div>
+    <button class="solo-back" onclick="showHomeScreen()">← Retour</button>
+  </div>
+</div>
+
 <!-- ===== SÉLECTION NIVEAU SOLO ===== -->
 <div id="solo-select-screen" class="screen hidden">
   <div class="solo-box fade-in">
     <div class="solo-title">MODE SOLO</div>
     <div class="solo-sub">Choisis ta mission</div>
-    <div class="diff-section" id="solo-diff-section"></div>
+    <div class="diff-readonly" id="solo-slot-diff-info"></div>
     <div class="level-cards" id="solo-level-cards"></div>
-    <button class="solo-back" onclick="showHomeScreen()">← Retour</button>
+    <button class="solo-back" onclick="showSoloScreen()">← Retour aux sauvegardes</button>
   </div>
 </div>
 
@@ -568,18 +581,29 @@ let soloFinished = false;
 const SOLO_WAVE_SIZE = 3; // nombre de vaisseaux envoyés par attaque en mode solo
 let soloFleetReserve = 0; // vaisseaux gagnés au quiz, en attente d'être envoyés par paquets
 
-// ===== DIFFICULTÉ SOLO (localStorage) =====
-const SOLO_DIFF_KEY = 'mentalwar_solo_difficulty';
-let soloDifficulty = parseInt(localStorage.getItem(SOLO_DIFF_KEY)) || 1;
+// ===== SLOTS DE SAUVEGARDE SOLO (localStorage) =====
+const SOLO_SAVE_KEYS = ['mentalwar_solo_save_1', 'mentalwar_solo_save_2', 'mentalwar_solo_save_3'];
+let currentSoloSlot = 0; // index du slot actif (0-2)
+let soloDifficulty = 1;  // difficulté de la sauvegarde active (fixée à la création du slot)
+let pendingNewSlot = null; // index du slot en cours de création (choix de difficulté)
 
-// ===== PROGRESSION SOLO (localStorage) =====
-const SOLO_SAVE_KEY = 'mentalwar_solo_progress';
+function getSlotData(i) {
+  try { return JSON.parse(localStorage.getItem(SOLO_SAVE_KEYS[i])); }
+  catch(e) { return null; }
+}
+function setSlotData(i, data) {
+  localStorage.setItem(SOLO_SAVE_KEYS[i], JSON.stringify(data));
+}
+function deleteSlotData(i) {
+  localStorage.removeItem(SOLO_SAVE_KEYS[i]);
+}
+
+// ===== PROGRESSION SOLO (slot actif) =====
 function getSoloProgress() {
-  try { return JSON.parse(localStorage.getItem(SOLO_SAVE_KEY)) || { maxUnlocked: 1 }; }
-  catch(e) { return { maxUnlocked: 1 }; }
+  return getSlotData(currentSoloSlot) || { maxUnlocked: 1, difficulty: soloDifficulty };
 }
 function setSoloProgress(p) {
-  localStorage.setItem(SOLO_SAVE_KEY, JSON.stringify(p));
+  setSlotData(currentSoloSlot, p);
 }
 function unlockSoloLevel(num) {
   const p = getSoloProgress();
@@ -629,36 +653,99 @@ function showToast(msg, duration=2500) {
 // ===== NAVIGATION =====
 window.showHomeScreen = function() {
   document.getElementById('home-screen').classList.remove('hidden');
+  document.getElementById('solo-slots-screen').classList.add('hidden');
   document.getElementById('solo-select-screen').classList.add('hidden');
   document.getElementById('lobby-screen').classList.add('hidden');
 };
 window.showSoloScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
-  document.getElementById('solo-select-screen').classList.remove('hidden');
-  renderSoloDifficultySelector();
-  renderSoloLevelCards();
+  document.getElementById('solo-select-screen').classList.add('hidden');
+  document.getElementById('solo-slots-screen').classList.remove('hidden');
+  pendingNewSlot = null;
+  renderSoloSlots();
 };
 
-// ===== SÉLECTION DIFFICULTÉ SOLO =====
-function renderSoloDifficultySelector() {
-  const section = document.getElementById('solo-diff-section');
-  if (!section) return;
-  section.innerHTML = `
-    <div class="diff-section-label">Niveau de difficulté des questions</div>
-    <div class="diff-row">
-      ${[1,2,3].map(i => `
-        <button class="diff-btn${soloDifficulty===i?' active':''}" onclick="setSoloDifficulty(${i})">
-          <div class="diff-btn-num">${i}</div>
-          <div>${DIFF_NAMES[i]}</div>
-        </button>`).join('')}
-    </div>
-    <div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px;min-height:16px">${DIFF_DESCS[soloDifficulty]}</div>`;
+// ===== SLOTS DE SAUVEGARDE SOLO =====
+function renderSoloSlots() {
+  const container = document.getElementById('solo-slot-cards');
+  container.innerHTML = '';
+
+  if (pendingNewSlot !== null) {
+    const box = document.createElement('div');
+    box.className = 'diff-section';
+    box.innerHTML = `
+      <div class="diff-section-label">Nouvelle partie — Emplacement ${pendingNewSlot + 1}</div>
+      <div class="diff-row">
+        ${[1,2,3].map(i => `
+          <button class="diff-btn" onclick="createSoloSlot(${i})">
+            <div class="diff-btn-num">${i}</div>
+            <div>${DIFF_NAMES[i]}</div>
+          </button>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px">Choisis le niveau de difficulté des questions pour cette sauvegarde — il ne pourra plus être changé en cours de partie.</div>
+      <button class="solo-back" onclick="cancelNewSoloSlot()" style="margin-top:14px">← Annuler</button>`;
+    container.appendChild(box);
+    return;
+  }
+
+  for (let i = 0; i < SOLO_SAVE_KEYS.length; i++) {
+    const data = getSlotData(i);
+    const card = document.createElement('div');
+    card.className = 'level-card';
+    if (data) {
+      const finished = data.maxUnlocked > SOLO_LEVELS.length;
+      const lvlIdx = Math.min(data.maxUnlocked, SOLO_LEVELS.length) - 1;
+      const chapterLabel = finished ? 'Galaxie reconquise' : SOLO_LEVELS[lvlIdx].chapter;
+      card.innerHTML = `
+        <div class="level-card-num">${i + 1}</div>
+        <div class="level-card-info">
+          <div class="level-card-chapter">${chapterLabel}</div>
+          <div class="level-card-name">Partie ${i + 1}</div>
+          <div class="level-card-desc">Difficulté : ${DIFF_NAMES[data.difficulty]}</div>
+        </div>
+        <div class="level-card-badge">▶</div>
+        <button class="slot-delete-btn" title="Supprimer cette sauvegarde">🗑</button>`;
+      card.querySelector('.slot-delete-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        if (confirm(`Supprimer la sauvegarde "Partie ${i + 1}" ?`)) { deleteSlotData(i); renderSoloSlots(); }
+      });
+      card.addEventListener('click', () => enterSoloSlot(i));
+    } else {
+      card.innerHTML = `
+        <div class="level-card-num">${i + 1}</div>
+        <div class="level-card-info">
+          <div class="level-card-chapter">Emplacement vide</div>
+          <div class="level-card-name">Nouvelle partie</div>
+          <div class="level-card-desc">Choisis une difficulté pour commencer</div>
+        </div>
+        <div class="level-card-badge">＋</div>`;
+      card.addEventListener('click', () => { pendingNewSlot = i; renderSoloSlots(); });
+    }
+    container.appendChild(card);
+  }
 }
-window.setSoloDifficulty = function(n) {
-  soloDifficulty = n;
-  localStorage.setItem(SOLO_DIFF_KEY, n);
-  renderSoloDifficultySelector();
+window.cancelNewSoloSlot = function() {
+  pendingNewSlot = null;
+  renderSoloSlots();
 };
+window.createSoloSlot = function(difficulty) {
+  const slot = pendingNewSlot;
+  setSlotData(slot, { maxUnlocked: 1, difficulty });
+  pendingNewSlot = null;
+  enterSoloSlot(slot);
+};
+function enterSoloSlot(i) {
+  currentSoloSlot = i;
+  const data = getSoloProgress();
+  soloDifficulty = data.difficulty;
+  document.getElementById('solo-slots-screen').classList.add('hidden');
+  document.getElementById('solo-select-screen').classList.remove('hidden');
+  document.getElementById('solo-slot-diff-info').innerHTML = `
+    <div class="diff-readonly-label">Niveau de difficulté</div>
+    <div class="diff-readonly-val">${soloDifficulty} — ${DIFF_NAMES[soloDifficulty]}</div>
+    <div class="diff-readonly-sub">${DIFF_DESCS[soloDifficulty]}</div>`;
+  renderSoloLevelCards();
+}
 window.showMultiScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
   document.getElementById('lobby-screen').classList.remove('hidden');
