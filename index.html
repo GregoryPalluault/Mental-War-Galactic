@@ -996,7 +996,9 @@ function checkSoloResult() {
   const mine = planets.filter(p => p.team === 't1').length;
 
   // Victoire : toutes les planètes
-  if (mine === total) {
+  const hasBots = SOLO_LEVELS[soloLevelNum - 1].map.bots.length > 0;
+  const enemiesRemaining = planets.filter(p => p.team.startsWith('bot')).length;
+  if (mine === total || (hasBots && enemiesRemaining === 0)) {
     soloFinished = true;
     soloBotIntervals.forEach(clearInterval);
     soloBotIntervals = [];
