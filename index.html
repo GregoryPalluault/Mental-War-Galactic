@@ -29,16 +29,13 @@
   .home-btn-solo:hover { background: linear-gradient(135deg, rgba(255,215,0,0.25), rgba(204,136,0,0.25)); box-shadow: 0 0 30px rgba(255,215,0,0.2); transform: translateY(-2px); }
   .home-btn-multi { background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(0,136,170,0.15)); border: 1px solid rgba(0,229,255,0.35); color: var(--team1); }
   .home-btn-multi:hover { background: linear-gradient(135deg, rgba(0,229,255,0.25), rgba(0,136,170,0.25)); box-shadow: 0 0 30px rgba(0,229,255,0.2); transform: translateY(-2px); }
-  .home-btn-icon { font-size: 24px; }
+  .home-btn-icon { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; }
+  .home-btn-icon svg { width: 100%; height: 100%; }
 
   /* ===== SÉLECTION NIVEAU SOLO ===== */
   .solo-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 40px 48px; width: 560px; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
   .solo-title { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 5px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 4px; text-align: center; }
   .solo-sub { font-size: 10px; letter-spacing: 3px; color: var(--dim); text-transform: uppercase; margin-bottom: 32px; text-align: center; }
-  .solo-pseudo-row { display: flex; gap: 10px; margin-bottom: 24px; }
-  .solo-pseudo-input { flex: 1; background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.2); border-radius: 2px; color: var(--text); font-family: 'Exo 2', sans-serif; font-size: 15px; padding: 12px 16px; outline: none; }
-  .solo-pseudo-input:focus { border-color: var(--gold); }
-  .solo-pseudo-input::placeholder { color: var(--dim); }
   .level-cards { display: flex; flex-direction: column; gap: 10px; }
   .level-card { display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-radius: 4px; cursor: pointer; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.07); background: rgba(255,255,255,0.02); position: relative; }
   .level-card:hover:not(.locked) { transform: translateX(4px); background: rgba(255,255,255,0.05); }
@@ -54,6 +51,10 @@
   .solo-back { background: none; border: none; color: var(--dim); font-size: 11px; letter-spacing: 2px; cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; width: 100%; text-align: center; padding: 6px; }
   .solo-back:hover { color: var(--text); }
   .level-card-chapter { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; text-transform: uppercase; }
+  #solo-diff-section.diff-section { margin-top: 0; margin-bottom: 24px; }
+  #solo-slot-diff-info.diff-readonly { margin-bottom: 24px; }
+  .slot-delete-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,68,68,0.1); border: 1px solid rgba(255,68,68,0.3); border-radius: 2px; color: var(--team2); font-size: 12px; padding: 4px 7px; cursor: pointer; line-height: 1; transition: all 0.2s; }
+  .slot-delete-btn:hover { background: rgba(255,68,68,0.25); }
 
   /* ===== HISTOIRE / BRIEFING SOLO ===== */
   .story-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 48px 56px; width: 600px; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
@@ -154,6 +155,9 @@
   .ap-step-waiting { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); color: var(--dim); }
   .ap-cancel { margin-top: auto; background: none; border: none; color: var(--dim); font-size: 11px; cursor: pointer; letter-spacing: 2px; text-decoration: underline; padding: 8px; }
   .ap-cancel:hover { color: var(--text); }
+  .ap-wave-info { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .ap-wave-icon { width: 32px; height: 22px; object-fit: contain; }
+  .ap-wave-mult { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 900; color: var(--gold); }
 
   /* ===== WINNER ===== */
   #winner-screen { flex-direction: column; background: rgba(0,0,0,0.85); z-index: 300; }
@@ -184,7 +188,6 @@
   #toast.hidden { opacity: 0; }
   @keyframes selectPulse { 0% { stroke-width: 3; opacity: 0.9; } 50% { stroke-width: 6; opacity: 0.5; } 100% { stroke-width: 3; opacity: 0.9; } }
   .planet-selected-ring { animation: selectPulse 1s infinite; }
-  @keyframes rotatePlanetRing { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   #game-screen { position: static; display: none; }
   #game-screen:not(.hidden) { display: block; }
 
@@ -246,13 +249,36 @@
     <div class="home-title">MENTAL WAR</div>
     <div class="home-sub">Galactic Edition</div>
     <button class="home-btn home-btn-solo" onclick="showSoloScreen()">
-      <span class="home-btn-icon">🚀</span>
+      <span class="home-btn-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M16 3 L26 8 V16 C26 23 21 27 16 29 C11 27 6 23 6 16 V8 Z"/>
+          <path d="M16 9 L19.5 16 L16 23 L12.5 16 Z"/>
+          <circle cx="16" cy="16" r="1.4" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
       <span>Mode Solo</span>
     </button>
     <button class="home-btn home-btn-multi" onclick="showMultiScreen()">
-      <span class="home-btn-icon">⚡</span>
+      <span class="home-btn-icon">
+        <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <circle cx="9" cy="9" r="3.4"/>
+          <circle cx="23" cy="9" r="3.4"/>
+          <circle cx="16" cy="23" r="3.4"/>
+          <path d="M11.8 11.2 L13.6 20.2 M20.2 11.2 L18.4 20.2 M12.4 9 H19.6"/>
+        </svg>
+      </span>
       <span>Multijoueur</span>
     </button>
+  </div>
+</div>
+
+<!-- ===== SLOTS DE SAUVEGARDE SOLO ===== -->
+<div id="solo-slots-screen" class="screen hidden">
+  <div class="solo-box fade-in">
+    <div class="solo-title">MODE SOLO</div>
+    <div class="solo-sub">Choisis ta sauvegarde</div>
+    <div class="level-cards" id="solo-slot-cards"></div>
+    <button class="solo-back" onclick="showHomeScreen()">← Retour</button>
   </div>
 </div>
 
@@ -261,11 +287,9 @@
   <div class="solo-box fade-in">
     <div class="solo-title">MODE SOLO</div>
     <div class="solo-sub">Choisis ta mission</div>
-    <div class="solo-pseudo-row">
-      <input class="solo-pseudo-input" id="solo-pseudo-input" type="text" placeholder="Ton pseudo de commandant" maxlength="16">
-    </div>
+    <div class="diff-readonly" id="solo-slot-diff-info"></div>
     <div class="level-cards" id="solo-level-cards"></div>
-    <button class="solo-back" onclick="showHomeScreen()">← Retour</button>
+    <button class="solo-back" onclick="showSoloScreen()">← Retour aux sauvegardes</button>
   </div>
 </div>
 
@@ -342,13 +366,14 @@
       </defs>
       <g id="planets-layer"></g>
       <g id="projectiles-layer"></g>
+      <g id="orbit-layer"></g>
     </svg>
   </div>
   <div id="right-panel">
     <div id="question-panel"></div>
     <div id="attack-panel" class="hidden">
       <div class="ap-ships-big" id="ap-ships">0</div>
-      <div class="ap-ships-label">VAISSEAUX DISPONIBLES</div>
+      <div class="ap-ships-label" id="ap-ships-label">VAISSEAUX DISPONIBLES</div>
       <div id="ap-step1" class="ap-step ap-step-active">① Clique sur une de tes planètes (départ)</div>
       <div id="ap-step2" class="ap-step ap-step-waiting">② Clique sur la planète cible</div>
       <button class="ap-cancel" id="ap-cancel-btn" onclick="cancelAttackSelection()" style="display:none">✕ Annuler la sélection</button>
@@ -567,15 +592,32 @@ let soloLevelNum = 1;
 let soloBotIntervals = [];
 let soloMapState = {};   // carte locale (pas Firebase)
 let soloFinished = false;
+const SOLO_WAVE_SIZE = 3; // nombre de vaisseaux envoyés par attaque en mode solo
+let soloFleetReserve = 0; // vaisseaux gagnés au quiz, en attente d'être envoyés par paquets
 
-// ===== PROGRESSION SOLO (localStorage) =====
-const SOLO_SAVE_KEY = 'mentalwar_solo_progress';
+// ===== SLOTS DE SAUVEGARDE SOLO (localStorage) =====
+const SOLO_SAVE_KEYS = ['mentalwar_solo_save_1', 'mentalwar_solo_save_2', 'mentalwar_solo_save_3'];
+let currentSoloSlot = 0; // index du slot actif (0-2)
+let soloDifficulty = 1;  // difficulté de la sauvegarde active (fixée à la création du slot)
+let pendingNewSlot = null; // index du slot en cours de création (choix de difficulté)
+
+function getSlotData(i) {
+  try { return JSON.parse(localStorage.getItem(SOLO_SAVE_KEYS[i])); }
+  catch(e) { return null; }
+}
+function setSlotData(i, data) {
+  localStorage.setItem(SOLO_SAVE_KEYS[i], JSON.stringify(data));
+}
+function deleteSlotData(i) {
+  localStorage.removeItem(SOLO_SAVE_KEYS[i]);
+}
+
+// ===== PROGRESSION SOLO (slot actif) =====
 function getSoloProgress() {
-  try { return JSON.parse(localStorage.getItem(SOLO_SAVE_KEY)) || { maxUnlocked: 1 }; }
-  catch(e) { return { maxUnlocked: 1 }; }
+  return getSlotData(currentSoloSlot) || { maxUnlocked: 1, difficulty: soloDifficulty };
 }
 function setSoloProgress(p) {
-  localStorage.setItem(SOLO_SAVE_KEY, JSON.stringify(p));
+  setSlotData(currentSoloSlot, p);
 }
 function unlockSoloLevel(num) {
   const p = getSoloProgress();
@@ -625,17 +667,99 @@ function showToast(msg, duration=2500) {
 // ===== NAVIGATION =====
 window.showHomeScreen = function() {
   document.getElementById('home-screen').classList.remove('hidden');
+  document.getElementById('solo-slots-screen').classList.add('hidden');
   document.getElementById('solo-select-screen').classList.add('hidden');
   document.getElementById('lobby-screen').classList.add('hidden');
 };
 window.showSoloScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
-  document.getElementById('solo-select-screen').classList.remove('hidden');
-  renderSoloLevelCards();
-  // Pré-remplir pseudo depuis multi si dispo
-  const multiPseudo = document.getElementById('pseudo-input').value;
-  if (multiPseudo) document.getElementById('solo-pseudo-input').value = multiPseudo;
+  document.getElementById('solo-select-screen').classList.add('hidden');
+  document.getElementById('solo-slots-screen').classList.remove('hidden');
+  pendingNewSlot = null;
+  renderSoloSlots();
 };
+
+// ===== SLOTS DE SAUVEGARDE SOLO =====
+function renderSoloSlots() {
+  const container = document.getElementById('solo-slot-cards');
+  container.innerHTML = '';
+
+  if (pendingNewSlot !== null) {
+    const box = document.createElement('div');
+    box.className = 'diff-section';
+    box.innerHTML = `
+      <div class="diff-section-label">Nouvelle partie — Emplacement ${pendingNewSlot + 1}</div>
+      <div class="diff-row">
+        ${[1,2,3].map(i => `
+          <button class="diff-btn" onclick="createSoloSlot(${i})">
+            <div class="diff-btn-num">${i}</div>
+            <div>${DIFF_NAMES[i]}</div>
+          </button>`).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--dim);text-align:center;margin-top:8px">Choisis le niveau de difficulté des questions pour cette sauvegarde — il ne pourra plus être changé en cours de partie.</div>
+      <button class="solo-back" onclick="cancelNewSoloSlot()" style="margin-top:14px">← Annuler</button>`;
+    container.appendChild(box);
+    return;
+  }
+
+  for (let i = 0; i < SOLO_SAVE_KEYS.length; i++) {
+    const data = getSlotData(i);
+    const card = document.createElement('div');
+    card.className = 'level-card';
+    if (data) {
+      const finished = data.maxUnlocked > SOLO_LEVELS.length;
+      const lvlIdx = Math.min(data.maxUnlocked, SOLO_LEVELS.length) - 1;
+      const chapterLabel = finished ? 'Galaxie reconquise' : SOLO_LEVELS[lvlIdx].chapter;
+      card.innerHTML = `
+        <div class="level-card-num">${i + 1}</div>
+        <div class="level-card-info">
+          <div class="level-card-chapter">${chapterLabel}</div>
+          <div class="level-card-name">Partie ${i + 1}</div>
+          <div class="level-card-desc">Difficulté : ${DIFF_NAMES[data.difficulty]}</div>
+        </div>
+        <div class="level-card-badge">▶</div>
+        <button class="slot-delete-btn" title="Supprimer cette sauvegarde">🗑</button>`;
+      card.querySelector('.slot-delete-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        if (confirm(`Supprimer la sauvegarde "Partie ${i + 1}" ?`)) { deleteSlotData(i); renderSoloSlots(); }
+      });
+      card.addEventListener('click', () => enterSoloSlot(i));
+    } else {
+      card.innerHTML = `
+        <div class="level-card-num">${i + 1}</div>
+        <div class="level-card-info">
+          <div class="level-card-chapter">Emplacement vide</div>
+          <div class="level-card-name">Nouvelle partie</div>
+          <div class="level-card-desc">Choisis une difficulté pour commencer</div>
+        </div>
+        <div class="level-card-badge">＋</div>`;
+      card.addEventListener('click', () => { pendingNewSlot = i; renderSoloSlots(); });
+    }
+    container.appendChild(card);
+  }
+}
+window.cancelNewSoloSlot = function() {
+  pendingNewSlot = null;
+  renderSoloSlots();
+};
+window.createSoloSlot = function(difficulty) {
+  const slot = pendingNewSlot;
+  setSlotData(slot, { maxUnlocked: 1, difficulty });
+  pendingNewSlot = null;
+  enterSoloSlot(slot);
+};
+function enterSoloSlot(i) {
+  currentSoloSlot = i;
+  const data = getSoloProgress();
+  soloDifficulty = data.difficulty;
+  document.getElementById('solo-slots-screen').classList.add('hidden');
+  document.getElementById('solo-select-screen').classList.remove('hidden');
+  document.getElementById('solo-slot-diff-info').innerHTML = `
+    <div class="diff-readonly-label">Niveau de difficulté</div>
+    <div class="diff-readonly-val">${soloDifficulty} — ${DIFF_NAMES[soloDifficulty]}</div>
+    <div class="diff-readonly-sub">${DIFF_DESCS[soloDifficulty]}</div>`;
+  renderSoloLevelCards();
+}
 window.showMultiScreen = function() {
   document.getElementById('home-screen').classList.add('hidden');
   document.getElementById('lobby-screen').classList.remove('hidden');
@@ -665,8 +789,6 @@ function renderSoloLevelCards() {
 
 // ===== BRIEFING D'HISTOIRE SOLO =====
 function startSoloLevelFlow(num) {
-  const pseudo = document.getElementById('solo-pseudo-input').value.trim();
-  if (!pseudo) { showToast('Entre un pseudo !'); return; }
   showSoloStory(num);
 }
 
@@ -690,9 +812,7 @@ function showSoloStory(num) {
 
 // ===== DÉMARRAGE NIVEAU SOLO =====
 function startSoloLevel(num) {
-  const pseudo = document.getElementById('solo-pseudo-input').value.trim();
-  if (!pseudo) { showToast('Entre un pseudo !'); return; }
-  myPseudo = pseudo;
+  myPseudo = 'Commandant';
   myTeam = 't1';
   myLevel = 1;
   isSolo = true;
@@ -861,6 +981,7 @@ function checkSoloResult() {
 }
 
 function showSoloVictory() {
+  clearOrbitFleet();
   document.getElementById('solo-winner-screen').classList.remove('hidden');
   document.getElementById('solo-winner-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
   document.getElementById('solo-winner-story').innerHTML = SOLO_LEVELS[soloLevelNum-1].storyOutro || '';
@@ -875,6 +996,7 @@ function showSoloVictory() {
 }
 
 function showSoloDefeat() {
+  clearOrbitFleet();
   document.getElementById('solo-defeat-screen').classList.remove('hidden');
   document.getElementById('solo-defeat-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
 }
@@ -904,8 +1026,9 @@ function cleanupSolo() {
   soloBotIntervals = [];
   soloMapState = {};
   gameState = null;
-  earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
+  earnedShips = 0; soloFleetReserve = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
   myLevel = 1; myTotalShips = 0;
+  clearOrbitFleet();
   document.getElementById('planets-layer').innerHTML = '';
   document.getElementById('projectiles-layer').innerHTML = '';
   document.getElementById('attack-panel').classList.add('hidden');
@@ -1187,9 +1310,9 @@ function renderMap(planets) {
     const shine = mkCircle(p.x-p.r*0.25, p.y-p.r*0.25, p.r*0.28, 'rgba(255,255,255,0.18)', 'none', '0', '1'); g.appendChild(shine);
     if (p.isHome) {
       const ring1 = mkCircle(p.x, p.y, p.r+16, 'none', color, '1.2', '0.4');
-      ring1.setAttribute('stroke-dasharray', '6 5'); ring1.style.transformOrigin = `${p.x}px ${p.y}px`; ring1.style.animation = `rotatePlanetRing 8s linear infinite`; g.appendChild(ring1);
+      ring1.setAttribute('stroke-dasharray', '6 5'); g.appendChild(ring1);
       const ring2 = mkCircle(p.x, p.y, p.r+22, 'none', color, '0.6', '0.2');
-      ring2.setAttribute('stroke-dasharray', '2 10'); ring2.style.transformOrigin = `${p.x}px ${p.y}px`; ring2.style.animation = `rotatePlanetRing 14s linear infinite reverse`; g.appendChild(ring2);
+      ring2.setAttribute('stroke-dasharray', '2 10'); g.appendChild(ring2);
     }
     const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     txt.setAttribute('x', p.x); txt.setAttribute('y', p.y+5); txt.setAttribute('text-anchor', 'middle');
@@ -1305,7 +1428,7 @@ window.ingSelectLevel = function(level) {
 // ===== QUIZ =====
 function startQuiz() {
   if (isSolo && soloFinished) return; // niveau terminé, ne pas relancer
-  questions = generateQuestions(myLevel, isSolo ? 1 : gameDifficulty);
+  questions = generateQuestions(myLevel, isSolo ? soloDifficulty : gameDifficulty);
   currentQ = 0; answers = []; earnedShips = 0;
   attackStep = 0; fromPlanet = null; toPlanet = null;
   document.getElementById('attack-panel').classList.add('hidden');
@@ -1502,14 +1625,85 @@ function answerQuestion(chosen, correct) {
 function showAttackPanel() {
   document.getElementById('question-panel').style.display = 'none';
   document.getElementById('attack-panel').classList.remove('hidden');
-  attackStep = 1; fromPlanet = null; toPlanet = null;
-  document.getElementById('ap-ships').textContent = earnedShips;
+  if (isSolo) {
+    // En solo, les vaisseaux gagnés partent en orbite et sont envoyés par paquets
+    soloFleetReserve = earnedShips;
+    earnedShips = 0;
+    attackStep = 2; fromPlanet = 'planet_player'; toPlanet = null;
+    highlightPlanet('planet_player');
+    startOrbitFleet();
+  } else {
+    attackStep = 1; fromPlanet = null; toPlanet = null;
+    document.getElementById('ap-ships').textContent = earnedShips;
+  }
   updateAttackUI();
+}
+
+// ===== FLOTTE EN ORBITE (SOLO) =====
+const MAX_ORBIT_SHIPS = 8;
+const ORBIT_RADIUS_OFFSET = 26;
+const ORBIT_PERIOD = 12000; // durée d'une révolution complète (ms)
+let soloOrbitRAF = null;
+let soloOrbitElapsed = 0;
+// Angle d'un vaisseau n°i sur l'orbite à l'instant t (ms écoulées)
+function orbitAngle(i, t) {
+  const base = (i / MAX_ORBIT_SHIPS) * Math.PI * 2 - Math.PI / 2;
+  return base + (t / ORBIT_PERIOD) * Math.PI * 2;
+}
+function orbitPos(p, angle) {
+  const radius = p.r + ORBIT_RADIUS_OFFSET;
+  return { x: p.x + Math.cos(angle) * radius, y: p.y + Math.sin(angle) * radius };
+}
+function clearOrbitFleet() {
+  if (soloOrbitRAF) { cancelAnimationFrame(soloOrbitRAF); soloOrbitRAF = null; }
+  const layer = document.getElementById('orbit-layer');
+  if (layer) layer.innerHTML = '';
+}
+function renderOrbitFleet(t) {
+  const layer = document.getElementById('orbit-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  if (!isSolo || soloFleetReserve <= 0) return;
+  const p = gameState?.['planet_player'];
+  if (!p) return;
+  const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
+  const size = 18;
+  for (let i = 0; i < count; i++) {
+    const angle = orbitAngle(i, t);
+    const { x, y } = orbitPos(p, angle);
+    const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    img.setAttribute('href', SHIP_IMAGES[1]);
+    img.setAttribute('width', size); img.setAttribute('height', size);
+    img.setAttribute('x', x - size/2); img.setAttribute('y', y - size/2);
+    // La pointe du vaisseau suit la tangente de la trajectoire (sens de déplacement)
+    img.setAttribute('transform', `rotate(${angle*180/Math.PI + 270} ${x} ${y})`);
+    img.setAttribute('pointer-events', 'none');
+    layer.appendChild(img);
+  }
+}
+function startOrbitFleet() {
+  clearOrbitFleet();
+  const start = performance.now();
+  const step = (now) => {
+    soloOrbitElapsed = now - start;
+    renderOrbitFleet(soloOrbitElapsed);
+    soloOrbitRAF = requestAnimationFrame(step);
+  };
+  soloOrbitRAF = requestAnimationFrame(step);
 }
 
 function updateAttackUI() {
   const s1 = document.getElementById('ap-step1'), s2 = document.getElementById('ap-step2'), cb = document.getElementById('ap-cancel-btn');
+  if (isSolo) {
+    document.getElementById('ap-ships').textContent = soloFleetReserve;
+    document.getElementById('ap-ships-label').textContent = 'VAISSEAUX EN ORBITE';
+    s1.className = 'ap-step ap-step-done';
+    s1.innerHTML = `<div class="ap-wave-info"><img class="ap-wave-icon" src="${SHIP_IMAGES[1]}" alt=""><span class="ap-wave-mult">× ${SOLO_WAVE_SIZE}</span> par attaque</div>`;
+    s2.className = 'ap-step ap-step-active'; s2.textContent = '🎯 Clique sur une planète pour envoyer un paquet'; cb.style.display = 'none';
+    return;
+  }
   if (attackStep === 1) {
+    document.getElementById('ap-ships-label').textContent = 'VAISSEAUX DISPONIBLES';
     s1.className = 'ap-step ap-step-active'; s1.textContent = '① Clique sur une de tes planètes (départ)';
     s2.className = 'ap-step ap-step-waiting'; s2.textContent = '② Clique sur la planète cible'; cb.style.display = 'none';
   } else {
@@ -1520,15 +1714,58 @@ function updateAttackUI() {
 
 // ===== CLIC PLANÈTE =====
 function onPlanetClick(planetId) {
+  if (isSolo) {
+    if (attackStep !== 2 || soloFleetReserve <= 0) return;
+    if (!gameState?.[planetId]) return;
+    if (planetId === 'planet_player') { showToast('Choisis une planète à attaquer !'); return; }
+    fireWaveAttack(planetId);
+    return;
+  }
   if (attackStep === 0 || earnedShips === 0) return;
   const planet = gameState?.[planetId]; if (!planet) return;
   if (attackStep === 1) {
     if (planet.team !== 't1' && planet.team !== myTeam) { showToast('Choisis une de tes planètes comme départ !'); return; }
-    if (isSolo && planet.team !== 't1') { showToast('Choisis une de tes planètes comme départ !'); return; }
     fromPlanet = planetId; attackStep = 2; highlightPlanet(fromPlanet); updateAttackUI();
   } else if (attackStep === 2) {
     if (planetId === fromPlanet) { showToast('Choisis une planète différente !'); return; }
     toPlanet = planetId; fireAttack();
+  }
+}
+
+// ===== ENVOI D'UN PAQUET DE VAISSEAUX (SOLO) =====
+function fireWaveAttack(targetId) {
+  const p = gameState?.['planet_player'], tp = gameState?.[targetId];
+  if (!p || !tp) return;
+  const wave = Math.min(SOLO_WAVE_SIZE, soloFleetReserve);
+  // Le vaisseau quitte sa position actuelle sur l'orbite, en une seule trajectoire vers la cible
+  const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
+  const launch = orbitPos(p, orbitAngle(count - 1, soloOrbitElapsed));
+  soloFleetReserve -= wave;
+  renderOrbitFleet(soloOrbitElapsed);
+
+  animateProjectile({ x: launch.x, y: launch.y }, { x: tp.x, y: tp.y }, '#00e5ff', wave);
+  setTimeout(() => {
+    if (soloFinished) return;
+    soloApplyAttack(targetId, 't1', wave);
+    myTotalShips += wave;
+    document.getElementById('banner-my-ships').textContent = myTotalShips;
+  }, ANIM_DURATION);
+
+  if (soloFleetReserve <= 0) {
+    attackStep = 0; fromPlanet = null; toPlanet = null;
+    clearOrbitFleet();
+    document.getElementById('selection-ring')?.remove();
+    document.getElementById('attack-panel').classList.add('hidden');
+    const panel = document.getElementById('question-panel');
+    panel.style.display = 'flex';
+    panel.scrollTop = 0;
+    panel.innerHTML = `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px">
+      <div style="font-size:36px">🚀</div>
+      <div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:2px;color:var(--dim)">VAISSEAUX EN ROUTE…</div>
+    </div>`;
+    setTimeout(() => { if (!soloFinished) showLevelSelector(); }, ANIM_DURATION);
+  } else {
+    updateAttackUI();
   }
 }
 
@@ -1548,51 +1785,24 @@ async function fireAttack() {
   const ships = earnedShips;
   const impactTarget = toPlanet;
 
-  if (isSolo) {
-    // Animation locale
-    animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, '#00e5ff', ships);
-    earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
-    document.getElementById('ap-ships').textContent = 0;
-    document.getElementById('selection-ring')?.remove();
-    attackPending = false;
-    // Pendant l'animation : afficher message d'attente
-    document.getElementById('attack-panel').classList.add('hidden');
-    const panel = document.getElementById('question-panel');
-    panel.style.display = 'flex';
-    panel.scrollTop = 0;
-    panel.innerHTML = `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px">
-      <div style="font-size:36px">🚀</div>
-      <div style="font-family:Orbitron,monospace;font-size:12px;letter-spacing:2px;color:var(--dim)">VAISSEAUX EN ROUTE…</div>
-    </div>`;
-    // Après l'impact : appliquer et relancer seulement si pas encore terminé
-    setTimeout(() => {
-      soloApplyAttack(impactTarget, 't1', ships);
-      myTotalShips += ships;
-      document.getElementById('banner-my-ships').textContent = myTotalShips;
-      // showSoloVictory ou showSoloDefeat seront appelés par checkSoloResult si besoin
-      // Sinon on relance le sélecteur
-      if (!soloFinished) showLevelSelector();
-    }, ANIM_DURATION);
-  } else {
-    // Multi : Firebase
-    const projRef = push(gameRef('projectiles'));
-    await set(projRef, { fx: fp.x, fy: fp.y, tx: tp.x, ty: tp.y, team: myTeam, ships, ts: Date.now(), seen: { [myId]: true } });
-    animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, TEAM_COLORS[myTeam], ships);
-    earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
-    document.getElementById('ap-ships').textContent = 0;
-    document.getElementById('selection-ring')?.remove();
-    attackPending = false;
-    document.getElementById('attack-panel').classList.add('hidden');
-    document.getElementById('question-panel').style.display = 'flex';
-    showLevelSelector();
-    setTimeout(async () => {
-      await applyAttack(impactTarget, myTeam, ships);
-      myTotalShips += ships;
-      await update(gameRef(`players/${myId}`), { totalShips: myTotalShips });
-      document.getElementById('banner-my-ships').textContent = myTotalShips;
-      cleanOldProjectiles();
-    }, ANIM_DURATION);
-  }
+  // Multi : Firebase
+  const projRef = push(gameRef('projectiles'));
+  await set(projRef, { fx: fp.x, fy: fp.y, tx: tp.x, ty: tp.y, team: myTeam, ships, ts: Date.now(), seen: { [myId]: true } });
+  animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, TEAM_COLORS[myTeam], ships);
+  earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
+  document.getElementById('ap-ships').textContent = 0;
+  document.getElementById('selection-ring')?.remove();
+  attackPending = false;
+  document.getElementById('attack-panel').classList.add('hidden');
+  document.getElementById('question-panel').style.display = 'flex';
+  showLevelSelector();
+  setTimeout(async () => {
+    await applyAttack(impactTarget, myTeam, ships);
+    myTotalShips += ships;
+    await update(gameRef(`players/${myId}`), { totalShips: myTotalShips });
+    document.getElementById('banner-my-ships').textContent = myTotalShips;
+    cleanOldProjectiles();
+  }, ANIM_DURATION);
 }
 
 async function cleanOldProjectiles() {
@@ -1605,7 +1815,8 @@ async function cleanOldProjectiles() {
 
 window.cancelAttackSelection = function() { attackStep=1; fromPlanet=null; document.getElementById('selection-ring')?.remove(); updateAttackUI(); };
 window.skipAttack = function() {
-  earnedShips=0; attackStep=0; fromPlanet=null; toPlanet=null;
+  earnedShips=0; soloFleetReserve=0; attackStep=0; fromPlanet=null; toPlanet=null;
+  clearOrbitFleet();
   document.getElementById('selection-ring')?.remove();
   document.getElementById('attack-panel').classList.add('hidden');
   showLevelSelector();
