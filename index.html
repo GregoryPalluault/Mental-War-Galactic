@@ -53,6 +53,19 @@
   .level-card-badge { font-size: 18px; flex-shrink: 0; }
   .solo-back { background: none; border: none; color: var(--dim); font-size: 11px; letter-spacing: 2px; cursor: pointer; text-decoration: underline; margin-top: 20px; display: block; width: 100%; text-align: center; padding: 6px; }
   .solo-back:hover { color: var(--text); }
+  .level-card-chapter { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; text-transform: uppercase; }
+
+  /* ===== HISTOIRE / BRIEFING SOLO ===== */
+  .story-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(255,215,0,0.2); border-radius: 4px; padding: 48px 56px; width: 600px; box-shadow: 0 0 60px rgba(255,215,0,0.05); }
+  .story-chapter { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 5px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4); margin-bottom: 8px; text-align: center; text-transform: uppercase; }
+  .story-title { font-family: 'Orbitron', monospace; font-size: 22px; font-weight: 900; letter-spacing: 3px; color: var(--text); margin-bottom: 24px; text-align: center; }
+  .story-text { font-size: 14px; line-height: 1.8; color: var(--text); margin-bottom: 28px; }
+  .story-text p { margin-bottom: 12px; }
+  .story-text p:last-child { margin-bottom: 0; }
+  .story-text .story-char { color: var(--gold); font-weight: 700; }
+  .story-btn { width: 100%; padding: 16px; border: none; border-radius: 2px; font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 3px; font-weight: 700; cursor: pointer; transition: all 0.2s; text-transform: uppercase; background: linear-gradient(135deg, var(--gold), #cc8800); color: #000; box-shadow: 0 0 30px rgba(255,215,0,0.3); }
+  .story-btn:hover { box-shadow: 0 0 50px rgba(255,215,0,0.5); transform: translateY(-1px); }
+  .solo-winner-story { font-size: 13px; line-height: 1.7; color: var(--text); max-width: 480px; margin: 0 auto 28px; opacity: 0.85; }
 
   /* ===== LOBBY MULTI ===== */
   .lobby-box { background: linear-gradient(135deg, rgba(10,22,40,0.97), rgba(5,10,20,0.97)); border: 1px solid rgba(0,200,255,0.2); border-radius: 4px; padding: 48px 56px; width: 480px; box-shadow: 0 0 60px rgba(0,200,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05); text-align: center; }
@@ -256,6 +269,16 @@
   </div>
 </div>
 
+<!-- ===== HISTOIRE / BRIEFING SOLO ===== -->
+<div id="solo-story-screen" class="screen hidden">
+  <div class="story-box fade-in">
+    <div class="story-chapter" id="story-chapter"></div>
+    <div class="story-title" id="story-title"></div>
+    <div class="story-text" id="story-text"></div>
+    <button class="story-btn" id="story-start-btn">Commencer la mission ▶</button>
+  </div>
+</div>
+
 <!-- ===== LOBBY MULTI ===== -->
 <div id="lobby-screen" class="screen hidden">
   <div class="lobby-box fade-in">
@@ -350,6 +373,7 @@
     <div class="solo-winner-label">MISSION ACCOMPLIE</div>
     <div class="solo-winner-title">VICTOIRE !</div>
     <div class="solo-winner-lvl" id="solo-winner-lvl"></div>
+    <div class="solo-winner-story" id="solo-winner-story"></div>
     <div class="solo-winner-btns">
       <button class="solo-winner-btn swb-next" id="solo-next-btn" onclick="soloNextLevel()">Niveau suivant ▶</button>
       <button class="solo-winner-btn swb-menu" onclick="soloBackToMenu()">← Menu</button>
@@ -430,6 +454,10 @@ const SOLO_LEVELS = [
   {
     num: 1, name: 'Premiers pas',
     desc: '1 planète neutre à conquérir — Éclaireur uniquement',
+    chapter: 'Chapitre 1 — Le réveil',
+    storyTitle: "Le dernier signal d'Aethon",
+    storyIntro: `<p>Le vaisseau-amiral <span class="story-char">Aethon Vigilance</span> dérive depuis trois cents ans, moteurs éteints, équipage en cryo-sommeil. Quand la <span class="story-char">Commandante Lyra Vahn</span> ouvre les yeux, les écrans n'affichent qu'un mot : <strong>SILENCE</strong>.</p><p>La galaxie qu'elle connaissait a disparu. Les balises d'Aethon sont muettes. Un avant-poste minier à l'abandon flotte à portée de tir — la première étape d'une reconquête qui s'annonce longue.</p>`,
+    storyOutro: `<p>L'avant-poste reprend vie sous les couleurs d'Aethon. Lyra scanne les environs : trois colonies apparaissent sur les radars, silencieuses elles aussi. Peut-être y trouvera-t-elle des survivants... ou des réponses.</p>`,
     shipsAllowed: [1],
     map: {
       player: { x: 200, y: 350, r: 40, ships: 30 },
@@ -441,6 +469,10 @@ const SOLO_LEVELS = [
   {
     num: 2, name: 'Exploration',
     desc: '3 planètes neutres — Éclaireur & Croiseur',
+    chapter: 'Chapitre 2 — Colonies silencieuses',
+    storyTitle: 'Les colonies silencieuses',
+    storyIntro: `<p>Trois colonies abandonnées gravitent en périphérie du secteur. Lyra y envoie ses éclaireurs, espérant trouver du carburant, des renforts — ou simplement des indices sur ce qui a frappé Aethon.</p><p>Chaque planète reconquise renforce la flotte. Mais le silence radio devient de plus en plus inquiétant à mesure que les éclaireurs s'enfoncent dans le secteur.</p>`,
+    storyOutro: `<p>Les trois colonies sont reconquises. Dans les décombres de la dernière, un signal crypté capte l'attention de Lyra : une signature militaire... mais pas Aethon. Quelqu'un d'autre revendique ce secteur.</p>`,
     shipsAllowed: [1, 2],
     map: {
       player: { x: 180, y: 350, r: 40, ships: 30 },
@@ -456,6 +488,10 @@ const SOLO_LEVELS = [
   {
     num: 3, name: 'Premier ennemi',
     desc: '2 neutres + 1 ennemi — Tous vaisseaux disponibles',
+    chapter: 'Chapitre 3 — Contact hostile',
+    storyTitle: 'Le pavillon Malachar',
+    storyIntro: `<p>Le signal mène à un ancien chantier naval d'Aethon, désormais occupé par une flotte aux couleurs écarlates : <span class="story-char">le Cartel Malachar</span>. Ils ont profité du chaos pour s'installer — et ne comptent pas partir.</p><p>Lyra n'a pas le choix : pour reconstruire, elle doit d'abord combattre. Le premier coup de feu de la reconquête est sur le point d'être tiré.</p>`,
+    storyOutro: `<p>Le chantier naval Malachar tombe. Mais la victoire est de courte durée : les capteurs longue portée détectent une seconde flotte hostile convergeant vers le secteur. La guerre vient à peine de commencer.</p>`,
     shipsAllowed: [1, 2, 3],
     map: {
       player: { x: 180, y: 350, r: 40, ships: 30 },
@@ -470,6 +506,10 @@ const SOLO_LEVELS = [
   {
     num: 4, name: 'Résistance',
     desc: '3 neutres + 2 ennemis — Bots plus agressifs',
+    chapter: 'Chapitre 4 — La horde s\'étend',
+    storyTitle: 'Deux fronts, une flotte',
+    storyIntro: `<p>Les survivants du Cartel Malachar appellent du renfort, et une nouvelle faction — <span class="story-char">la Horde Kryl</span> — flaire l'opportunité. Le secteur d'Aurigae devient un champ de bataille à trois camps.</p><p>Lyra doit défendre ses colonies sur deux fronts à la fois, tout en poursuivant son expansion. Chaque planète comptera.</p>`,
+    storyOutro: `<p>Les deux flottes ennemies sont repoussées, affaiblies mais pas détruites. Une dernière force, restée dans l'ombre depuis le début, se révèle enfin : les <span class="story-char">Voidborn</span>, véritables responsables de la chute d'Aethon.</p>`,
     shipsAllowed: [1, 2, 3],
     map: {
       player: { x: 160, y: 350, r: 40, ships: 30 },
@@ -488,6 +528,10 @@ const SOLO_LEVELS = [
   {
     num: 5, name: 'Conquête totale',
     desc: '3 neutres + 3 ennemis — Survie et conquête',
+    chapter: 'Chapitre 5 — La reconquête d\'Aurigae',
+    storyTitle: "La reconquête d'Aurigae",
+    storyIntro: `<p>Trois flottes ennemies, un seul secteur, une dernière chance. Les Voidborn, le Cartel Malachar et la Horde Kryl convergent tous vers Aurigae pour s'emparer des ruines d'Aethon.</p><p><span class="story-char">Commandante Lyra Vahn</span> rassemble ce qu'il reste de sa flotte pour la bataille finale. Si elle l'emporte, Aurigae renaîtra sous le pavillon d'Aethon. Si elle échoue, la galaxie tombera dans l'oubli.</p>`,
+    storyOutro: `<p>Aurigae est libre. Sous le commandement de Lyra Vahn, le pavillon d'Aethon flotte de nouveau sur chaque monde du secteur. La reconquête de la galaxie ne fait que commencer...</p>`,
     shipsAllowed: [1, 2, 3],
     map: {
       player: { x: 160, y: 350, r: 40, ships: 30 },
@@ -609,13 +653,39 @@ function renderSoloLevelCards() {
     card.innerHTML = `
       <div class="level-card-num">${lvl.num}</div>
       <div class="level-card-info">
+        <div class="level-card-chapter">${lvl.chapter}</div>
         <div class="level-card-name">${lvl.name}</div>
         <div class="level-card-desc">${lvl.desc}</div>
       </div>
       <div class="level-card-badge">${completed ? '✅' : unlocked ? '▶' : '🔒'}</div>`;
-    if (unlocked) card.addEventListener('click', () => startSoloLevel(lvl.num));
+    if (unlocked) card.addEventListener('click', () => startSoloLevelFlow(lvl.num));
     container.appendChild(card);
   });
+}
+
+// ===== BRIEFING D'HISTOIRE SOLO =====
+function startSoloLevelFlow(num) {
+  const pseudo = document.getElementById('solo-pseudo-input').value.trim();
+  if (!pseudo) { showToast('Entre un pseudo !'); return; }
+  showSoloStory(num);
+}
+
+function showSoloStory(num) {
+  const lvl = SOLO_LEVELS[num - 1];
+  document.getElementById('home-screen').classList.add('hidden');
+  document.getElementById('solo-select-screen').classList.add('hidden');
+  document.getElementById('game-screen').classList.add('hidden');
+  document.getElementById('solo-objective').classList.add('hidden');
+  document.getElementById('solo-winner-screen').classList.add('hidden');
+  document.getElementById('solo-defeat-screen').classList.add('hidden');
+  document.getElementById('story-chapter').textContent = lvl.chapter;
+  document.getElementById('story-title').textContent = lvl.storyTitle;
+  document.getElementById('story-text').innerHTML = lvl.storyIntro;
+  document.getElementById('solo-story-screen').classList.remove('hidden');
+  document.getElementById('story-start-btn').onclick = () => {
+    document.getElementById('solo-story-screen').classList.add('hidden');
+    startSoloLevel(num);
+  };
 }
 
 // ===== DÉMARRAGE NIVEAU SOLO =====
@@ -630,13 +700,14 @@ function startSoloLevel(num) {
   soloFinished = false;
 
   document.getElementById('solo-select-screen').classList.add('hidden');
+  document.getElementById('solo-story-screen').classList.add('hidden');
   document.getElementById('game-screen').classList.remove('hidden');
   document.getElementById('solo-winner-screen').classList.add('hidden');
   document.getElementById('solo-defeat-screen').classList.add('hidden');
 
   // Bandeau objectif
   document.getElementById('solo-objective').classList.remove('hidden');
-  document.getElementById('solo-level-badge').textContent = `NIVEAU ${num}`;
+  document.getElementById('solo-level-badge').textContent = SOLO_LEVELS[num - 1].chapter.toUpperCase();
 
   // Bandeau équipe
   const color = TEAM_COLORS['t1'];
@@ -792,12 +863,13 @@ function checkSoloResult() {
 function showSoloVictory() {
   document.getElementById('solo-winner-screen').classList.remove('hidden');
   document.getElementById('solo-winner-lvl').textContent = `Niveau ${soloLevelNum} — ${SOLO_LEVELS[soloLevelNum-1].name}`;
+  document.getElementById('solo-winner-story').innerHTML = SOLO_LEVELS[soloLevelNum-1].storyOutro || '';
   const nextBtn = document.getElementById('solo-next-btn');
   if (soloLevelNum >= SOLO_LEVELS.length) {
     nextBtn.textContent = '🏆 Tous les niveaux terminés !';
     nextBtn.onclick = soloBackToMenu;
   } else {
-    nextBtn.textContent = 'Niveau suivant ▶';
+    nextBtn.textContent = 'Chapitre suivant ▶';
     nextBtn.onclick = soloNextLevel;
   }
 }
@@ -809,9 +881,8 @@ function showSoloDefeat() {
 
 window.soloNextLevel = function() {
   if (soloLevelNum >= SOLO_LEVELS.length) { soloBackToMenu(); return; }
-  document.getElementById('solo-winner-screen').classList.add('hidden');
   cleanupSolo();
-  startSoloLevel(soloLevelNum + 1);
+  showSoloStory(soloLevelNum + 1);
 };
 window.soloRetry = function() {
   document.getElementById('solo-defeat-screen').classList.add('hidden');
