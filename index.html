@@ -1536,6 +1536,19 @@ function generateQuestions(shipLevel, difficulty = 1) {
     const b = ri(2, 10);
     return mkQ(`${table * b} ÷ ${table}`, b);
   }
+  function halfQ() {
+    const a = ri(5, 50) * 2;                   // pair 10-100
+    return mkQ(`${a} × 0,5`, a / 2);
+  }
+  function threeQuarterQ() {
+    const a = ri(5, 20) * 4;                   // multiple de 4 : 20-80
+    return mkQ(`${a} × 3/4`, a * 3 / 4);
+  }
+  function pctQ(pct) {
+    const mult = pct === 10 ? 10 : pct === 20 ? 5 : pct === 25 ? 4 : 2;
+    const a = ri(3, 20) * mult;                // garantit answer entier
+    return mkQ(`${pct}% de ${a}`, Math.round(a * pct / 100));
+  }
 
   // ── Plan des questions selon (difficulty × shipLevel) ────────────────
   const gen = []; // fonctions-génératrices, seront mélangées puis appelées
@@ -1580,31 +1593,26 @@ function generateQuestions(shipLevel, difficulty = 1) {
 
   } else { // difficulty === 3
     if (shipLevel === 1) {
-      // Éclaireur N3 : 3 add(10-20+1-10) · 2 sub(10-20−1-9) · 5 mult ×5-9
-      for (let i = 0; i < 3; i++) gen.push(() => addQ(10, 20, 1, 10));
-      for (let i = 0; i < 2; i++) gen.push(() => subQ(10, 20, 1, 9));
-      shu([5, 6, 7, 8, 9]).forEach(t => gen.push(() => multQ(t)));
-    } else if (shipLevel === 2) {
-      // Croiseur N3 : 2 add(10-20+30-50) · 2 sub(50-100−10-20) · 3 mult ×7-9 · 3 div ×6-9
+      // Éclaireur N3 = Amiral N2 (Moyen) : 2 add(10-20+30-50) · 2 sub(50-100−10-20) · 3 mult ×5-9 · 3 div ×5-9
       for (let i = 0; i < 2; i++) gen.push(() => addQ(10, 20, 30, 50));
       for (let i = 0; i < 2; i++) gen.push(() => subQ(50, 100, 10, 20));
-      shu([7, 8, 9]).forEach(t => gen.push(() => multQ(t)));
-      shu([6, 7, 8, 9]).slice(0, 3).forEach(t => gen.push(() => divQ(t)));
+      shu([5, 6, 7, 8, 9]).slice(0, 3).forEach(t => gen.push(() => multQ(t)));
+      shu([5, 6, 7, 8, 9]).slice(0, 3).forEach(t => gen.push(() => divQ(t)));
+    } else if (shipLevel === 2) {
+      // Croiseur N3 : mix de l'Amiral N3 et de l'Éclaireur N3 (= Amiral N2)
+      // 2 add(10-20+30-50) · 2 sub(50-100−10-20) · 2 mult ×5-9 · 1 ×0,5 · 1 ×3/4 · 1 pourcentage · 1 div ×7-9
+      for (let i = 0; i < 2; i++) gen.push(() => addQ(10, 20, 30, 50));
+      for (let i = 0; i < 2; i++) gen.push(() => subQ(50, 100, 10, 20));
+      shu([5, 6, 7, 8, 9]).slice(0, 2).forEach(t => gen.push(() => multQ(t)));
+      gen.push(() => halfQ());
+      gen.push(() => threeQuarterQ());
+      gen.push(() => pctQ(rPick([10, 20, 25, 50])));
+      shu([7, 8, 9]).slice(0, 1).forEach(t => gen.push(() => divQ(t)));
     } else {
       // Amiral N3 : 2 ×0,5 · 2 ×3/4 · 3 pourcentages(10/20/25/50%) · 3 div ×7-9
-      for (let i = 0; i < 2; i++) gen.push(() => {
-        const a = ri(5, 50) * 2;                   // pair 10-100
-        return mkQ(`${a} × 0,5`, a / 2);
-      });
-      for (let i = 0; i < 2; i++) gen.push(() => {
-        const a = ri(5, 20) * 4;                   // multiple de 4 : 20-80
-        return mkQ(`${a} × 3/4`, a * 3 / 4);
-      });
-      shu([10, 20, 25, 50]).slice(0, 3).forEach(pct => gen.push(() => {
-        const mult = pct === 10 ? 10 : pct === 20 ? 5 : pct === 25 ? 4 : 2;
-        const a = ri(3, 20) * mult;                // garantit answer entier
-        return mkQ(`${pct}% de ${a}`, Math.round(a * pct / 100));
-      }));
+      for (let i = 0; i < 2; i++) gen.push(() => halfQ());
+      for (let i = 0; i < 2; i++) gen.push(() => threeQuarterQ());
+      shu([10, 20, 25, 50]).slice(0, 3).forEach(pct => gen.push(() => pctQ(pct)));
       shu([7, 8, 9]).forEach(t => gen.push(() => divQ(t)));
     }
   }
