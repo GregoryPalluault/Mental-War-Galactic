@@ -161,6 +161,12 @@
   .ap-wave-info { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .ap-wave-icon { width: 32px; height: 22px; object-fit: contain; }
   .ap-wave-mult { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 900; color: var(--gold); }
+  .ap-fraction-label { font-size: 10px; letter-spacing: 3px; color: var(--dim); margin-bottom: 8px; text-transform: uppercase; }
+  .ap-fraction-btns { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; }
+  .ap-fraction-btn { flex: 1; padding: 8px 0; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 2px; color: var(--dim); font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
+  .ap-fraction-btn:hover { background: rgba(0,200,255,0.1); border-color: rgba(0,200,255,0.3); color: var(--team1); }
+  .ap-fraction-btn.active { background: rgba(0,200,255,0.15); border-color: rgba(0,200,255,0.5); color: var(--team1); }
+  .ap-wave-count { font-family: 'Orbitron', monospace; font-size: 13px; color: var(--gold); margin-bottom: 10px; text-align: center; }
 
   /* ===== WINNER ===== */
   #winner-screen { flex-direction: column; background: rgba(0,0,0,0.85); z-index: 300; }
@@ -381,6 +387,15 @@
       <div class="ap-ships-big" id="ap-ships">0</div>
       <div class="ap-ships-label" id="ap-ships-label">VAISSEAUX DISPONIBLES</div>
       <div id="ap-step1" class="ap-step ap-step-active">① Clique sur une de tes planètes (départ)</div>
+      <div id="ap-multi-controls" style="display:none">
+        <div class="ap-fraction-label">Vaisseaux par attaque</div>
+        <div class="ap-fraction-btns">
+          <button class="ap-fraction-btn active" id="ap-frac-all" onclick="setMultiFraction(1)">Tout</button>
+          <button class="ap-fraction-btn" id="ap-frac-half" onclick="setMultiFraction(0.5)">½</button>
+          <button class="ap-fraction-btn" id="ap-frac-third" onclick="setMultiFraction(0.333)">⅓</button>
+        </div>
+        <div class="ap-wave-count" id="ap-wave-count"></div>
+      </div>
       <div id="ap-step2" class="ap-step ap-step-waiting">② Clique sur la planète cible</div>
       <button class="ap-cancel" id="ap-cancel-btn" onclick="cancelAttackSelection()" style="display:none">✕ Annuler la sélection</button>
       <button class="ap-cancel" onclick="skipAttack()" style="margin-top:8px">Passer →</button>
@@ -475,6 +490,7 @@ const TEAM_COLORS  = { t1: '#00e5ff', t2: '#ff4444', t3: '#44ff88' };
 const TEAM_NAMES   = { t1: 'Équipe Cyan', t2: 'Équipe Rouge', t3: 'Équipe Verte' };
 const PLANET_NAMES = { t1: '★ AETHON', t2: '★ MALACHAR', t3: '★ VIRIDIS' };
 const MIN_PLAYERS  = 3;
+const MAX_PLAYERS  = 6;
 const ANIM_DURATION = 2700;
 const SHIP_IMAGES  = {
   1: 'Gemini_Generated_Image_Vaisseau_Eclaireur-removebg-preview.png',
@@ -590,6 +606,7 @@ let myId = null, myTeam = null, myPseudo = null, myLevel = 1;
 let gameState = null;
 let questions = [], currentQ = 0, answers = [], earnedShips = 0;
 let attackStep = 0, fromPlanet = null, toPlanet = null;
+let multiWaveFraction = 1; // fraction des vaisseaux envoyés par clic en multi (1, 0.5 ou 0.333)
 let regenInterval = null, timerInterval = null;
 let attackPending = false;
 let myTotalShips = 0;
@@ -1091,6 +1108,10 @@ window.joinLobby = async function() {
   const playersSnap = await get(gameRef('players'));
   const existing = playersSnap.val() || {};
   const onlinePlayers = Object.values(existing).filter(p => p.online !== false);
+  if (onlinePlayers.length >= MAX_PLAYERS) {
+    showToast(`Serveur plein (${MAX_PLAYERS} joueurs max) !`);
+    document.getElementById('join-btn').disabled = false; return;
+  }
   const counts = { t1: 0, t2: 0, t3: 0 };
   onlinePlayers.forEach(p => { if (p.team) counts[p.team]++; });
   myTeam = Object.keys(counts).reduce((a,b) => counts[a] <= counts[b] ? a : b);
@@ -1233,6 +1254,9 @@ function startGameScreen() {
     updateTeamShips(players); watchRegenMaster(players);
     const count = Object.keys(players).length;
     if (amRegenMaster) restartRegen(count);
+    // Si plus aucun joueur n'est connecté, on supprime la partie
+    const anyOnline = Object.values(players).some(p => p.online !== false);
+    if (!anyOnline && count > 0) remove(gameRef());
   });
   onValue(gameRef('projectiles'), snap => {
     const projs = snap.val(); if (!projs) return;
@@ -1702,8 +1726,14 @@ function showAttackPanel() {
     highlightPlanet('planet_player');
     startOrbitFleet();
   } else {
-    attackStep = 1; fromPlanet = null; toPlanet = null;
+    attackStep = 2; toPlanet = null;
+    fromPlanet = Object.keys(gameState || {}).find(id => gameState[id].team === myTeam) || null;
+    multiWaveFraction = 1;
     document.getElementById('ap-ships').textContent = earnedShips;
+    document.getElementById('ap-frac-all').classList.add('active');
+    document.getElementById('ap-frac-half').classList.remove('active');
+    document.getElementById('ap-frac-third').classList.remove('active');
+    startOrbitFleet();
   }
   updateAttackUI();
 }
@@ -1732,19 +1762,26 @@ function renderOrbitFleet(t) {
   const layer = document.getElementById('orbit-layer');
   if (!layer) return;
   layer.innerHTML = '';
-  if (!isSolo || soloFleetReserve <= 0) return;
-  const p = gameState?.['planet_player'];
+  let reserve, planetKey, shipImg;
+  if (isSolo) {
+    if (soloFleetReserve <= 0) return;
+    reserve = soloFleetReserve; planetKey = 'planet_player'; shipImg = SHIP_IMAGES[1];
+  } else {
+    if (earnedShips <= 0 || attackStep !== 2) return;
+    reserve = earnedShips; planetKey = fromPlanet; shipImg = SHIP_IMAGES[myLevel];
+  }
+  const p = gameState?.[planetKey];
   if (!p) return;
-  const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
+  const waveSize = isSolo ? SOLO_WAVE_SIZE : Math.max(1, Math.ceil(reserve * multiWaveFraction));
+  const count = Math.min(Math.ceil(reserve / waveSize), MAX_ORBIT_SHIPS);
   const size = 18;
   for (let i = 0; i < count; i++) {
     const angle = orbitAngle(i, t);
     const { x, y } = orbitPos(p, angle);
     const img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
-    img.setAttribute('href', SHIP_IMAGES[1]);
+    img.setAttribute('href', shipImg);
     img.setAttribute('width', size); img.setAttribute('height', size);
     img.setAttribute('x', x - size/2); img.setAttribute('y', y - size/2);
-    // La pointe du vaisseau suit la tangente de la trajectoire (sens de déplacement)
     img.setAttribute('transform', `rotate(${angle*180/Math.PI + 270} ${x} ${y})`);
     img.setAttribute('pointer-events', 'none');
     layer.appendChild(img);
@@ -1761,24 +1798,35 @@ function startOrbitFleet() {
   soloOrbitRAF = requestAnimationFrame(step);
 }
 
+window.setMultiFraction = function(f) {
+  multiWaveFraction = f;
+  document.getElementById('ap-frac-all').classList.toggle('active', f === 1);
+  document.getElementById('ap-frac-half').classList.toggle('active', f === 0.5);
+  document.getElementById('ap-frac-third').classList.toggle('active', f === 0.333);
+  updateAttackUI();
+};
+
 function updateAttackUI() {
   const s1 = document.getElementById('ap-step1'), s2 = document.getElementById('ap-step2'), cb = document.getElementById('ap-cancel-btn');
+  const mc = document.getElementById('ap-multi-controls'), wc = document.getElementById('ap-wave-count');
   if (isSolo) {
     document.getElementById('ap-ships').textContent = soloFleetReserve;
     document.getElementById('ap-ships-label').textContent = 'VAISSEAUX EN ORBITE';
     s1.className = 'ap-step ap-step-done';
     s1.innerHTML = `<div class="ap-wave-info"><img class="ap-wave-icon" src="${SHIP_IMAGES[1]}" alt=""><span class="ap-wave-mult">× ${SOLO_WAVE_SIZE}</span> par attaque</div>`;
+    s1.style.display = '';
     s2.className = 'ap-step ap-step-active'; s2.textContent = '🎯 Clique sur une planète pour envoyer un paquet'; cb.style.display = 'none';
+    mc.style.display = 'none';
     return;
   }
-  if (attackStep === 1) {
-    document.getElementById('ap-ships-label').textContent = 'VAISSEAUX DISPONIBLES';
-    s1.className = 'ap-step ap-step-active'; s1.textContent = '① Clique sur une de tes planètes (départ)';
-    s2.className = 'ap-step ap-step-waiting'; s2.textContent = '② Clique sur la planète cible'; cb.style.display = 'none';
-  } else {
-    s1.className = 'ap-step ap-step-done'; const fp = gameState?.[fromPlanet]; s1.textContent = `① Départ : ${fp?Math.floor(fp.ships)+' pts':'?'}`;
-    s2.className = 'ap-step ap-step-active'; s2.textContent = '② Clique sur la planète cible'; cb.style.display = 'block';
-  }
+  // Multijoueur : étape 1 masquée, multi-cibles activé
+  s1.style.display = 'none';
+  mc.style.display = 'block';
+  document.getElementById('ap-ships').textContent = earnedShips;
+  document.getElementById('ap-ships-label').textContent = 'VAISSEAUX DISPONIBLES';
+  const wave = Math.max(1, Math.ceil(earnedShips * multiWaveFraction));
+  wc.textContent = `→ ${Math.min(wave, earnedShips)} vaisseaux par clic`;
+  s2.className = 'ap-step ap-step-active'; s2.textContent = '🎯 Clique sur une planète cible'; cb.style.display = 'none';
 }
 
 // ===== CLIC PLANÈTE =====
@@ -1790,15 +1838,11 @@ function onPlanetClick(planetId) {
     fireWaveAttack(planetId);
     return;
   }
-  if (attackStep === 0 || earnedShips === 0) return;
+  if (attackStep !== 2 || earnedShips === 0) return;
   const planet = gameState?.[planetId]; if (!planet) return;
-  if (attackStep === 1) {
-    if (planet.team !== 't1' && planet.team !== myTeam) { showToast('Choisis une de tes planètes comme départ !'); return; }
-    fromPlanet = planetId; attackStep = 2; highlightPlanet(fromPlanet); updateAttackUI();
-  } else if (attackStep === 2) {
-    if (planetId === fromPlanet) { showToast('Choisis une planète différente !'); return; }
-    toPlanet = planetId; fireAttack();
-  }
+  if (planetId === fromPlanet) { showToast('Choisis une planète différente !'); return; }
+  if (planet.team === myTeam) { showToast('Tu ne peux pas attaquer ta propre équipe !'); return; }
+  toPlanet = planetId; fireAttack();
 }
 
 // ===== ENVOI D'UN PAQUET DE VAISSEAUX (SOLO) =====
@@ -1841,37 +1885,51 @@ function fireWaveAttack(targetId) {
 async function fireAttack() {
   if (attackPending) return;
   attackPending = true;
+  // Rafraîchit fromPlanet si la planète de départ a été conquise
+  if (!gameState?.[fromPlanet] || gameState[fromPlanet].team !== myTeam) {
+    fromPlanet = Object.keys(gameState || {}).find(id => gameState[id].team === myTeam) || null;
+  }
   const fp = gameState?.[fromPlanet], tp = gameState?.[toPlanet];
-  // Garde : planète disparue entre la sélection et le clic (bot ou regen)
   if (!fp || !tp) {
     attackPending = false;
     showToast('Planète invalide, recommence !');
-    attackStep = 1; fromPlanet = null;
+    attackStep = 2; toPlanet = null;
     document.getElementById('selection-ring')?.remove();
     updateAttackUI();
     return;
   }
-  const ships = earnedShips;
+  const wave = Math.max(1, Math.min(earnedShips, Math.ceil(earnedShips * multiWaveFraction)));
   const impactTarget = toPlanet;
 
-  // Multi : Firebase
+  // Lance depuis la position orbitale
+  const orbitCount = Math.min(Math.ceil(earnedShips / wave), MAX_ORBIT_SHIPS);
+  const launchPos = orbitPos(fp, orbitAngle(orbitCount - 1, soloOrbitElapsed));
+
   const projRef = push(gameRef('projectiles'));
-  await set(projRef, { fx: fp.x, fy: fp.y, tx: tp.x, ty: tp.y, team: myTeam, ships, ts: Date.now(), seen: { [myId]: true } });
-  animateProjectile({ x: fp.x, y: fp.y }, { x: tp.x, y: tp.y }, TEAM_COLORS[myTeam], ships);
-  earnedShips = 0; attackStep = 0; fromPlanet = null; toPlanet = null;
-  document.getElementById('ap-ships').textContent = 0;
+  await set(projRef, { fx: launchPos.x, fy: launchPos.y, tx: tp.x, ty: tp.y, team: myTeam, ships: wave, ts: Date.now(), seen: { [myId]: true } });
+  animateProjectile(launchPos, { x: tp.x, y: tp.y }, TEAM_COLORS[myTeam], wave);
+  earnedShips -= wave; toPlanet = null;
   document.getElementById('selection-ring')?.remove();
   attackPending = false;
-  document.getElementById('attack-panel').classList.add('hidden');
-  document.getElementById('question-panel').style.display = 'flex';
-  showLevelSelector();
+
   setTimeout(async () => {
-    await applyAttack(impactTarget, myTeam, ships);
-    myTotalShips += ships;
+    await applyAttack(impactTarget, myTeam, wave);
+    myTotalShips += wave;
     await update(gameRef(`players/${myId}`), { totalShips: myTotalShips });
     document.getElementById('banner-my-ships').textContent = myTotalShips;
     cleanOldProjectiles();
   }, ANIM_DURATION);
+
+  if (earnedShips <= 0) {
+    earnedShips = 0; attackStep = 0; fromPlanet = null;
+    clearOrbitFleet();
+    document.getElementById('attack-panel').classList.add('hidden');
+    document.getElementById('question-panel').style.display = 'flex';
+    showLevelSelector();
+  } else {
+    renderOrbitFleet(soloOrbitElapsed);
+    updateAttackUI();
+  }
 }
 
 async function cleanOldProjectiles() {
@@ -1882,7 +1940,7 @@ async function cleanOldProjectiles() {
   if (Object.keys(updates).length > 0) update(ref(db), updates);
 }
 
-window.cancelAttackSelection = function() { attackStep=1; fromPlanet=null; document.getElementById('selection-ring')?.remove(); updateAttackUI(); };
+window.cancelAttackSelection = function() { toPlanet=null; document.getElementById('selection-ring')?.remove(); updateAttackUI(); };
 window.skipAttack = function() {
   earnedShips=0; soloFleetReserve=0; attackStep=0; fromPlanet=null; toPlanet=null;
   clearOrbitFleet();
