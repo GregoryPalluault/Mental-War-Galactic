@@ -1254,6 +1254,9 @@ function startGameScreen() {
     updateTeamShips(players); watchRegenMaster(players);
     const count = Object.keys(players).length;
     if (amRegenMaster) restartRegen(count);
+    // Si plus aucun joueur n'est connecté, on supprime la partie
+    const anyOnline = Object.values(players).some(p => p.online !== false);
+    if (!anyOnline && count > 0) remove(gameRef());
   });
   onValue(gameRef('projectiles'), snap => {
     const projs = snap.val(); if (!projs) return;
