@@ -1682,7 +1682,7 @@ function renderQuestion() {
     <div class="q-text">${q.question} = ?</div>
     <div class="q-answers" id="q-answers"></div>`;
   const answersEl = panel.querySelector('#q-answers');
-  [...q.choices].sort((a, b) => a - b).forEach(c => {
+  [...q.choices].forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'q-btn'; btn.textContent = c;
     btn.onclick = () => answerQuestion(c, q.answer);
