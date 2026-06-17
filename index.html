@@ -161,11 +161,6 @@
   .ap-wave-info { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .ap-wave-icon { width: 32px; height: 22px; object-fit: contain; }
   .ap-wave-mult { font-family: 'Orbitron', monospace; font-size: 16px; font-weight: 900; color: var(--gold); }
-  .ap-fraction-label { font-size: 10px; letter-spacing: 3px; color: var(--dim); margin-bottom: 8px; text-transform: uppercase; }
-  .ap-fraction-btns { display: flex; gap: 6px; justify-content: center; margin-bottom: 10px; }
-  .ap-fraction-btn { flex: 1; padding: 8px 0; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 2px; color: var(--dim); font-family: 'Orbitron', monospace; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; }
-  .ap-fraction-btn:hover { background: rgba(0,200,255,0.1); border-color: rgba(0,200,255,0.3); color: var(--team1); }
-  .ap-fraction-btn.active { background: rgba(0,200,255,0.15); border-color: rgba(0,200,255,0.5); color: var(--team1); }
   .ap-wave-count { font-family: 'Orbitron', monospace; font-size: 13px; color: var(--gold); margin-bottom: 10px; text-align: center; }
 
   /* ===== WINNER ===== */
@@ -388,12 +383,6 @@
       <div class="ap-ships-label" id="ap-ships-label">VAISSEAUX DISPONIBLES</div>
       <div id="ap-step1" class="ap-step ap-step-active">① Clique sur une de tes planètes (départ)</div>
       <div id="ap-multi-controls" style="display:none">
-        <div class="ap-fraction-label">Vaisseaux par attaque</div>
-        <div class="ap-fraction-btns">
-          <button class="ap-fraction-btn active" id="ap-frac-all" onclick="setMultiFraction(1)">Tout</button>
-          <button class="ap-fraction-btn" id="ap-frac-half" onclick="setMultiFraction(0.5)">½</button>
-          <button class="ap-fraction-btn" id="ap-frac-third" onclick="setMultiFraction(0.333)">⅓</button>
-        </div>
         <div class="ap-wave-count" id="ap-wave-count"></div>
       </div>
       <div id="ap-step2" class="ap-step ap-step-waiting">② Clique sur la planète cible</div>
@@ -606,7 +595,6 @@ let myId = null, myTeam = null, myPseudo = null, myLevel = 1;
 let gameState = null;
 let questions = [], currentQ = 0, answers = [], earnedShips = 0;
 let attackStep = 0, fromPlanet = null, toPlanet = null;
-let multiWaveFraction = 1; // fraction des vaisseaux envoyés par clic en multi (1, 0.5 ou 0.333)
 let regenInterval = null, timerInterval = null;
 let attackPending = false;
 let myTotalShips = 0;
@@ -619,7 +607,7 @@ let soloLevelNum = 1;
 let soloBotIntervals = [];
 let soloMapState = {};   // carte locale (pas Firebase)
 let soloFinished = false;
-const SOLO_WAVE_SIZE = 3; // nombre de vaisseaux envoyés par attaque en mode solo
+const SOLO_WAVE_SIZES = { 1: 3, 2: 6, 3: 10 }; // vaisseaux par paquet selon le niveau
 let soloFleetReserve = 0; // vaisseaux gagnés au quiz, en attente d'être envoyés par paquets
 
 // ===== SLOTS DE SAUVEGARDE SOLO (localStorage) =====
@@ -1732,11 +1720,7 @@ function showAttackPanel() {
   } else {
     attackStep = 2; toPlanet = null;
     fromPlanet = Object.keys(gameState || {}).find(id => gameState[id].team === myTeam) || null;
-    multiWaveFraction = 1;
     document.getElementById('ap-ships').textContent = earnedShips;
-    document.getElementById('ap-frac-all').classList.add('active');
-    document.getElementById('ap-frac-half').classList.remove('active');
-    document.getElementById('ap-frac-third').classList.remove('active');
     startOrbitFleet();
   }
   updateAttackUI();
@@ -1776,7 +1760,7 @@ function renderOrbitFleet(t) {
   }
   const p = gameState?.[planetKey];
   if (!p) return;
-  const waveSize = isSolo ? SOLO_WAVE_SIZE : Math.max(1, Math.ceil(reserve * multiWaveFraction));
+  const waveSize = SOLO_WAVE_SIZES[myLevel] || 3;
   const count = Math.min(Math.ceil(reserve / waveSize), MAX_ORBIT_SHIPS);
   const size = 18;
   for (let i = 0; i < count; i++) {
@@ -1802,34 +1786,25 @@ function startOrbitFleet() {
   soloOrbitRAF = requestAnimationFrame(step);
 }
 
-window.setMultiFraction = function(f) {
-  multiWaveFraction = f;
-  document.getElementById('ap-frac-all').classList.toggle('active', f === 1);
-  document.getElementById('ap-frac-half').classList.toggle('active', f === 0.5);
-  document.getElementById('ap-frac-third').classList.toggle('active', f === 0.333);
-  updateAttackUI();
-};
-
 function updateAttackUI() {
   const s1 = document.getElementById('ap-step1'), s2 = document.getElementById('ap-step2'), cb = document.getElementById('ap-cancel-btn');
   const mc = document.getElementById('ap-multi-controls'), wc = document.getElementById('ap-wave-count');
+  const ws = SOLO_WAVE_SIZES[myLevel] || 3;
   if (isSolo) {
     document.getElementById('ap-ships').textContent = soloFleetReserve;
     document.getElementById('ap-ships-label').textContent = 'VAISSEAUX EN ORBITE';
     s1.className = 'ap-step ap-step-done';
-    s1.innerHTML = `<div class="ap-wave-info"><img class="ap-wave-icon" src="${SHIP_IMAGES[1]}" alt=""><span class="ap-wave-mult">× ${SOLO_WAVE_SIZE}</span> par attaque</div>`;
+    s1.innerHTML = `<div class="ap-wave-info"><img class="ap-wave-icon" src="${SHIP_IMAGES[myLevel]}" alt=""><span class="ap-wave-mult">× ${ws}</span> par attaque</div>`;
     s1.style.display = '';
     s2.className = 'ap-step ap-step-active'; s2.textContent = '🎯 Clique sur une planète pour envoyer un paquet'; cb.style.display = 'none';
     mc.style.display = 'none';
     return;
   }
-  // Multijoueur : étape 1 masquée, multi-cibles activé
   s1.style.display = 'none';
   mc.style.display = 'block';
   document.getElementById('ap-ships').textContent = earnedShips;
   document.getElementById('ap-ships-label').textContent = 'VAISSEAUX DISPONIBLES';
-  const wave = Math.max(1, Math.ceil(earnedShips * multiWaveFraction));
-  wc.textContent = `→ ${Math.min(wave, earnedShips)} vaisseaux par clic`;
+  wc.textContent = `→ ${Math.min(ws, earnedShips)} vaisseaux par clic`;
   s2.className = 'ap-step ap-step-active'; s2.textContent = '🎯 Clique sur une planète cible'; cb.style.display = 'none';
 }
 
@@ -1853,9 +1828,9 @@ function onPlanetClick(planetId) {
 function fireWaveAttack(targetId) {
   const p = gameState?.['planet_player'], tp = gameState?.[targetId];
   if (!p || !tp) return;
-  const wave = Math.min(SOLO_WAVE_SIZE, soloFleetReserve);
-  // Le vaisseau quitte sa position actuelle sur l'orbite, en une seule trajectoire vers la cible
-  const count = Math.min(Math.ceil(soloFleetReserve / SOLO_WAVE_SIZE), MAX_ORBIT_SHIPS);
+  const ws = SOLO_WAVE_SIZES[myLevel] || 3;
+  const wave = Math.min(ws, soloFleetReserve);
+  const count = Math.min(Math.ceil(soloFleetReserve / ws), MAX_ORBIT_SHIPS);
   const launch = orbitPos(p, orbitAngle(count - 1, soloOrbitElapsed));
   soloFleetReserve -= wave;
   renderOrbitFleet(soloOrbitElapsed);
@@ -1902,11 +1877,11 @@ async function fireAttack() {
     updateAttackUI();
     return;
   }
-  const wave = Math.max(1, Math.min(earnedShips, Math.ceil(earnedShips * multiWaveFraction)));
+  const ws = SOLO_WAVE_SIZES[myLevel] || 3;
+  const wave = Math.min(ws, earnedShips);
   const impactTarget = toPlanet;
 
-  // Lance depuis la position orbitale
-  const orbitCount = Math.min(Math.ceil(earnedShips / wave), MAX_ORBIT_SHIPS);
+  const orbitCount = Math.min(Math.ceil(earnedShips / ws), MAX_ORBIT_SHIPS);
   const launchPos = orbitPos(fp, orbitAngle(orbitCount - 1, soloOrbitElapsed));
 
   const projRef = push(gameRef('projectiles'));
