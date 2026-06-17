@@ -1254,9 +1254,13 @@ function startGameScreen() {
     updateTeamShips(players); watchRegenMaster(players);
     const count = Object.keys(players).length;
     if (amRegenMaster) restartRegen(count);
-    // Si plus aucun joueur n'est connecté, on supprime la partie
-    const anyOnline = Object.values(players).some(p => p.online !== false);
-    if (!anyOnline && count > 0) remove(gameRef());
+    const onlinePlayers = Object.values(players).filter(p => p.online !== false);
+    // Tous déconnectés : suppression immédiate (exécutée par les clients encore en ligne)
+    if (onlinePlayers.length === 0 && count > 0) { remove(gameRef()); return; }
+    // Dernier joueur connecté : arm côté serveur pour supprimer à sa déconnexion
+    if (onlinePlayers.length === 1 && onlinePlayers[0]?.id === myId) {
+      onDisconnect(gameRef()).remove();
+    }
   });
   onValue(gameRef('projectiles'), snap => {
     const projs = snap.val(); if (!projs) return;
