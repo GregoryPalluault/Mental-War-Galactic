@@ -1830,6 +1830,7 @@ function onPlanetClick(planetId) {
   if (attackStep !== 2 || earnedShips === 0) return;
   const planet = gameState?.[planetId]; if (!planet) return;
   if (planetId === fromPlanet) { showToast('Choisis une planète différente !'); return; }
+  if (planet.team === myTeam) { showToast('Tu ne peux pas attaquer ta propre équipe !'); return; }
   toPlanet = planetId; fireAttack();
 }
 
