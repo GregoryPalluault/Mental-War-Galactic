@@ -140,7 +140,7 @@
   .q-dot.active { background: var(--team1); box-shadow: 0 0 8px var(--team1); animation: blink 0.8s infinite alternate; }
   @keyframes blink { from { opacity: 1; } to { opacity: 0.3; } }
   .q-text { font-family: 'Orbitron', monospace; font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 20px; letter-spacing: 1px; text-align: center; line-height: 1.3; }
-  .q-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .q-answers { display: flex; flex-direction: column; gap: 10px; }
   .q-btn { padding: 13px 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 2px; color: var(--text); font-family: 'Exo 2', sans-serif; font-size: 19px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
   .q-btn:hover { background: rgba(0,200,255,0.1); border-color: var(--team1); color: #fff; }
   .q-btn.correct { background: rgba(68,255,136,0.15); border-color: var(--team3); color: var(--team3); }
@@ -1254,9 +1254,13 @@ function startGameScreen() {
     updateTeamShips(players); watchRegenMaster(players);
     const count = Object.keys(players).length;
     if (amRegenMaster) restartRegen(count);
-    // Si plus aucun joueur n'est connecté, on supprime la partie
-    const anyOnline = Object.values(players).some(p => p.online !== false);
-    if (!anyOnline && count > 0) remove(gameRef());
+    const onlinePlayers = Object.values(players).filter(p => p.online !== false);
+    // Tous déconnectés : suppression immédiate (exécutée par les clients encore en ligne)
+    if (onlinePlayers.length === 0 && count > 0) { remove(gameRef()); return; }
+    // Dernier joueur connecté : arm côté serveur pour supprimer à sa déconnexion
+    if (onlinePlayers.length === 1 && onlinePlayers[0]?.id === myId) {
+      onDisconnect(gameRef()).remove();
+    }
   });
   onValue(gameRef('projectiles'), snap => {
     const projs = snap.val(); if (!projs) return;
@@ -1690,7 +1694,7 @@ function renderQuestion() {
     <div class="q-text">${q.question} = ?</div>
     <div class="q-answers" id="q-answers"></div>`;
   const answersEl = panel.querySelector('#q-answers');
-  q.choices.forEach(c => {
+  [...q.choices].sort((a, b) => a - b).forEach(c => {
     const btn = document.createElement('button');
     btn.className = 'q-btn'; btn.textContent = c;
     btn.onclick = () => answerQuestion(c, q.answer);
